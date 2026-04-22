@@ -1,6 +1,6 @@
 -- AJGODZX SCANNER BOT (Professional Headless Version)
 -- Automaticaly hops servers, scans for mutation items, and pings logs to AJ Joiner.
--- VERSION: 1.0.2 (Force Sync)
+-- VERSION: 1.0.3 (Teleport FIX)
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -56,6 +56,7 @@ local allBrainrots = {
 local seenIds = {}
 
 local function serverHop()
+    print("📦 [BOT] Fetching servers...")
     local success, result = pcall(function()
         local servers = {}
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
@@ -71,25 +72,32 @@ local function serverHop()
         if #servers > 0 then
             table.sort(servers, function(a, b) return a.playing < b.playing end)
             local target = servers[1].id
+            print("📦 [BOT] Target found: " .. target)
             
             if queue_on_teleport then
                 queue_on_teleport([[loadstring(game:HttpGet("https://raw.githubusercontent.com/carinodanielcarl-cmd/LOGGERNOTIF/main/LOGGERFINDER.lua"))()]])
             end
             
             TeleportService:TeleportToPlaceInstance(game.PlaceId, target, lp)
+        else
+            print("📦 [BOT] No available servers found. Retrying in 5s...")
         end
     end)
+    if not success then print("📦 [BOT] Hop failed: " .. tostring(result)) end
     return success
 end
 
 local function postLog(newFinding)
     pcall(function()
-        local currentRaw = game:HttpGet(SHARED_URL)
-        local currentData = HttpService:JSONDecode(currentRaw)
+        local success, currentRaw = pcall(function() return game:HttpGet(SHARED_URL) end)
+        if not success then return end
+        
+        local decodeSuccess, currentData = pcall(function() return HttpService:JSONDecode(currentRaw) end)
+        if not decodeSuccess or not currentData then currentData = {findings = {}} end
         if not currentData.findings then currentData.findings = {} end
         
         newFinding.id = os.time() + math.random(1, 1000)
-        table.insert(currentData.findings, 1, newFinding) -- Insert at start for 'most recent'
+        table.insert(currentData.findings, 1, newFinding) 
         
         if #currentData.findings > 30 then table.remove(currentData.findings, 31) end
         
@@ -144,7 +152,7 @@ local function scanWorkspace()
 end
 
 print("========================================")
-print("🤖 AJGODZX PRO BOT RUNNING")
+print("🤖 AJGODZX PRO BOT RUNNING (v1.0.3)")
 print("📡 Mode: Headless Serverless")
 print("⏳ Hop Speed: " .. SCAN_TIME_PER_SERVER .. "s")
 print("========================================")
@@ -168,7 +176,7 @@ task.spawn(function()
         
         if (tick() - startTime) >= SCAN_TIME_PER_SERVER then
             print("📦 [BOT] 5s elapsed. Preparing to hop...")
-            task.wait(0.5) -- Small buffer to ensure final logs are caught
+            task.wait(0.5) 
             serverHop()
             startTime = tick() 
         end
