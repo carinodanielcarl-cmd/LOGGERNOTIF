@@ -1,5 +1,5 @@
--- AJGODZX SCANNER BOT (Headless Version)
--- Automaticaly hops servers, scans for items, and pings logs to AJ Joiner.
+-- AJGODZX SCANNER BOT (Headless Serverless Version)
+-- Automaticaly hops servers, scans for items, and pings logs to AJ Joiner via npoint.io.
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -10,8 +10,8 @@ local lp = Players.LocalPlayer
 
 -- [[ SETTINGS ]] --
 local SCAN_INTERVAL = 1.5
-local SCAN_TIME_PER_SERVER = 5 -- How long to scan before hopping
-local LOG_URL = "http://192.168.1.5:3000/log" -- YOUR PC's IP
+local SCAN_TIME_PER_SERVER = 5 
+local SHARED_URL = "https://api.npoint.io/3b590339f6bef0db0dfd" -- SHARED SERVERLESS BACKEND
 
 local allBrainrots = {
     "Los Nooo My Hotspotsitos", "Serafinna Medusella", "La Grande Combinassion", "La Easter Grande", "Rang Ring Bus", "Guest 666",
@@ -78,20 +78,37 @@ local function serverHop()
     return success
 end
 
-local function postLog(data)
-    local success, response = pcall(function()
-        local body = HttpService:JSONEncode(data)
-        if syn and syn.request then
-            return syn.request({Url = LOG_URL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = body})
-        elseif request then
-            return request({Url = LOG_URL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = body})
-        elseif http_request then
-            return http_request({Url = LOG_URL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = body})
-        else
-            return nil
+local function postToNPoint(newFinding)
+    pcall(function()
+        -- 1. Fetch current list
+        local currentRaw = game:HttpGet(SHARED_URL)
+        local currentData = HttpService:JSONDecode(currentRaw)
+        
+        if not currentData.findings then currentData.findings = {} end
+        
+        -- 2. Add new finding with unique ID
+        newFinding.id = #currentData.findings + 1
+        table.insert(currentData.findings, newFinding)
+        
+        -- 3. Keep only last 50
+        if #currentData.findings > 50 then
+            table.remove(currentData.findings, 1)
+        end
+        
+        -- 4. Push back to npoint
+        local body = HttpService:JSONEncode(currentData)
+        local options = {
+            Url = SHARED_URL,
+            Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = body
+        }
+        
+        if syn and syn.request then syn.request(options)
+        elseif request then request(options)
+        elseif http_request then http_request(options)
         end
     end)
-    return success
 end
 
 local function scanWorkspace()
@@ -119,8 +136,8 @@ local function scanWorkspace()
 end
 
 print("========================================")
-print("🚀 AJGODZX SCANNER BOT STARTED")
-print("📡 IP: " .. LOG_URL)
+print("🚀 AJGODZX SERVERLESS BOT STARTED")
+print("📡 BACKEND: npoint.io")
 print("⏳ Hop Delay: " .. SCAN_TIME_PER_SERVER .. "s")
 print("========================================")
 
@@ -135,8 +152,8 @@ task.spawn(function()
                 local key = find.name .. game.JobId
                 if not seenIds[key] then
                     seenIds[key] = true
-                    print("💎 Found: " .. find.name .. " | Pinging to backend...")
-                    postLog(find)
+                    print("💎 Found: " .. find.name .. " | Pinging to cloud...")
+                    postToNPoint(find)
                 end
             end
         end)
@@ -145,7 +162,7 @@ task.spawn(function()
         if (tick() - startTime) >= SCAN_TIME_PER_SERVER then
             print("📦 Hopping to new server...")
             serverHop()
-            startTime = tick() -- Reset if hop failed
+            startTime = tick() 
         end
         
         task.wait(SCAN_INTERVAL)
