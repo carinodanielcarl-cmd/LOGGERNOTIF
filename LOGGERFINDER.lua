@@ -1360,7 +1360,7 @@ task.spawn(SyncLCUsers)
 
 -- [[ SCANNER SETTINGS ]] --
 local SCAN_INTERVAL = 1.5
-local LOG_URL = "http://localhost:3000/log" -- Change to your hosted API URL
+local LOG_URL = "http://192.168.1.5:3000/log" -- Local IP for multi-device support
 local seenIds = {}
 
 local function serverHop()
