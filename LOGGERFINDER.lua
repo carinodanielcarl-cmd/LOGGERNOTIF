@@ -1,5 +1,5 @@
--- AJGODZX SCANNER BOT (Headless Serverless Version)
--- Automaticaly hops servers, scans for items, and pings logs to AJ Joiner via npoint.io.
+-- AJGODZX SCANNER BOT (Professional Headless Version)
+-- Automaticaly hops servers, scans for mutation items, and pings logs to AJ Joiner.
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -8,10 +8,13 @@ local task = task or {wait = wait, spawn = spawn}
 
 local lp = Players.LocalPlayer
 
--- [[ SETTINGS ]] --
-local SCAN_INTERVAL = 1.5
-local SCAN_TIME_PER_SERVER = 5 
-local SHARED_URL = "https://api.npoint.io/3b590339f6bef0db0dfd" -- SHARED SERVERLESS BACKEND
+-- [[ CONFIGURATION ]] --
+local SCAN_INTERVAL = 1.0
+local SCAN_TIME_PER_SERVER = 5 -- 5 Seconds as requested
+local SHARED_URL = "https://api.npoint.io/3b590339f6bef0db0dfd" 
+
+-- Mutation detection
+local Mutations = {"Diamond", "Gold", "Cyber", "Rainbow", "Candy", "Divine", "Galaxy", "Radioactive", "YinYang", "Halloween", "Christmas"}
 
 local allBrainrots = {
     "Los Nooo My Hotspotsitos", "Serafinna Medusella", "La Grande Combinassion", "La Easter Grande", "Rang Ring Bus", "Guest 666",
@@ -78,24 +81,17 @@ local function serverHop()
     return success
 end
 
-local function postToNPoint(newFinding)
+local function postLog(newFinding)
     pcall(function()
-        -- 1. Fetch current list
         local currentRaw = game:HttpGet(SHARED_URL)
         local currentData = HttpService:JSONDecode(currentRaw)
-        
         if not currentData.findings then currentData.findings = {} end
         
-        -- 2. Add new finding with unique ID
-        newFinding.id = #currentData.findings + 1
-        table.insert(currentData.findings, newFinding)
+        newFinding.id = os.time() + math.random(1, 1000)
+        table.insert(currentData.findings, 1, newFinding) -- Insert at start for 'most recent'
         
-        -- 3. Keep only last 50
-        if #currentData.findings > 50 then
-            table.remove(currentData.findings, 1)
-        end
+        if #currentData.findings > 30 then table.remove(currentData.findings, 31) end
         
-        -- 4. Push back to npoint
         local body = HttpService:JSONEncode(currentData)
         local options = {
             Url = SHARED_URL,
@@ -113,21 +109,32 @@ end
 
 local function scanWorkspace()
     local findings = {}
+    local pCount = #Players:GetPlayers()
+    local mPlayers = Players.MaxPlayers
+    
     for _, item in ipairs(game.Workspace:GetDescendants()) do
         if item:IsA("Model") or item:IsA("Part") then
-            for _, brainrotName in ipairs(allBrainrots) do
-                if item.Name == brainrotName then
-                    local val = 1000000 
-                    local tier = (val >= 10000000) and "Highlights" or "Midlights"
+            for _, base in ipairs(allBrainrots) do
+                if item.Name:find(base) then
+                    local mutation = nil
+                    for _, mut in ipairs(Mutations) do
+                        if item.Name:find(mut) then mutation = mut break end
+                    end
+                    
+                    local val = 50000000 -- Default (Mid)
+                    if mutation == "Diamond" or mutation == "Divine" or mutation == "Galaxy" then val = 200000000 end
                     
                     table.insert(findings, {
                         name = item.Name,
+                        base_name = base,
                         value = val,
-                        tier = tier,
+                        mutation = mutation,
+                        tier = (val >= 100000000) and "Highlights" or "Midlights",
+                        players = pCount .. "/" .. mPlayers,
                         job_id = game.JobId,
-                        base_name = item.Name,
                         timestamp = os.time()
                     })
+                    break
                 end
             end
         end
@@ -136,9 +143,9 @@ local function scanWorkspace()
 end
 
 print("========================================")
-print("🚀 AJGODZX SERVERLESS BOT STARTED")
-print("📡 BACKEND: npoint.io")
-print("⏳ Hop Delay: " .. SCAN_TIME_PER_SERVER .. "s")
+print("🤖 AJGODZX PRO BOT RUNNING")
+print("📡 Mode: Headless Serverless")
+print("⏳ Hop Speed: " .. SCAN_TIME_PER_SERVER .. "s")
 print("========================================")
 
 _G.AJGODZXScannerRunning = true
@@ -152,15 +159,14 @@ task.spawn(function()
                 local key = find.name .. game.JobId
                 if not seenIds[key] then
                     seenIds[key] = true
-                    print("💎 Found: " .. find.name .. " | Pinging to cloud...")
-                    postToNPoint(find)
+                    print("💎 [BOT] Found " .. find.name .. "! Syncing...")
+                    postLog(find)
                 end
             end
         end)
         
-        -- Server Hopping Logic
         if (tick() - startTime) >= SCAN_TIME_PER_SERVER then
-            print("📦 Hopping to new server...")
+            print("📦 [BOT] 5s elapsed. Hopping...")
             serverHop()
             startTime = tick() 
         end
