@@ -52,7 +52,9 @@ local userSettings = {
     PlaySound = true,
     ToggleKey = "RightShift",
     UseWhitelist = false,
-    Whitelist = {}
+    Whitelist = {},
+    AutoServerHop = false,
+    ScanTime = 5
 }
 
 -- ═══════════════════════════════════
@@ -638,6 +640,10 @@ local function makeActionBtn(parent, text, callback)
     end)
 end
 
+makeHeader( "── SCANNER SETTINGS" , SScroll)
+makeToggle(SScroll, "Auto Server Hop", "AutoServerHop")
+makeInput(SScroll, "Seconds Before Hop", "ScanTime")
+do local s = Instance.new("Frame", SScroll) s.Size = UDim2.new(1,0,0,4) s.BackgroundTransparency = 1 end
 makeHeader("── UI SETTINGS", SScroll)
 makeKeybindSetting(SScroll, "Toggle GUI Keybind")
 do local s = Instance.new("Frame", SScroll) s.Size = UDim2.new(1,0,0,4) s.BackgroundTransparency = 1 end
@@ -1353,9 +1359,36 @@ end
 task.spawn(SyncLCUsers)
 
 -- [[ SCANNER SETTINGS ]] --
-local SCAN_INTERVAL = 3
+local SCAN_INTERVAL = 1.5
 local LOG_URL = "http://localhost:3000/log" -- Change to your hosted API URL
 local seenIds = {}
+
+local function serverHop()
+    local success, result = pcall(function()
+        local servers = {}
+        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
+        local res = game:HttpGet(url)
+        local data = HttpService:JSONDecode(res)
+        
+        for _, s in ipairs(data.data) do
+            if s.playing < s.maxPlayers and s.id ~= game.JobId then
+                table.insert(servers, s)
+            end
+        end
+        
+        if #servers > 0 then
+            table.sort(servers, function(a, b) return a.playing < b.playing end)
+            local target = servers[1].id
+            
+            if queue_on_teleport then
+                queue_on_teleport([[loadstring(game:HttpGet("https://raw.githubusercontent.com/carinodanielcarl-cmd/LOGGERNOTIF/main/LOGGERFINDER.lua"))()]])
+            end
+            
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, target, lp)
+        end
+    end)
+    return success
+end
 
 local function postLog(data)
     local success, response = pcall(function()
@@ -1401,20 +1434,29 @@ end
 -- SCANNER LOOP
 -- ═══════════════════════════════════
 task.spawn(function()
+    local startTime = tick()
     while _G.AJGODZXScannerRunning do
-        pcall(function()
-            local findings = scanWorkspace()
-            for _, find in ipairs(findings) do
-                if not seenIds[find.name .. game.JobId] then
-                    seenIds[find.name .. game.JobId] = true
-                    addLogEntry(find)
-                    pushNotification(find)
-                    
-                    -- Report to Backend
-                    postLog(find)
-                end
+        local findings = scanWorkspace()
+        for _, find in ipairs(findings) do
+            if not seenIds[find.name .. game.JobId] then
+                seenIds[find.name .. game.JobId] = true
+                addLogEntry(find)
+                pushNotification(find)
+                
+                -- Report to Backend
+                postLog(find)
             end
-        end)
+        end
+        
+        -- Server Hopping Logic
+        if userSettings.AutoServerHop and (tick() - startTime) >= userSettings.ScanTime then
+            ajStatus.Text = "Hopping to new server..."
+            ajStatus.TextColor3 = T.Accent1
+            task.wait(1)
+            serverHop()
+            startTime = tick() -- Reset if hop failed
+        end
+        
         task.wait(SCAN_INTERVAL)
     end
 end)
