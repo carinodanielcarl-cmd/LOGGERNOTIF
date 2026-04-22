@@ -1,4 +1,4 @@
--- AJGODZX SCANNER BOT (Mini-UI Version v1.0.4)
+-- AJGODZX SCANNER BOT (Ultra-Robust v1.0.5)
 -- Automaticaly hops servers, scans for mutation items, and pings logs to AJ Joiner.
 
 local HttpService = game:GetService("HttpService")
@@ -56,13 +56,13 @@ local allBrainrots = {
 
 -- [[ UI CREATION ]] --
 local Gui = Instance.new("ScreenGui", game:GetService("CoreGui") or lp.PlayerGui)
-Gui.Name = "AJGODZX_MINI"
+Gui.Name = "AJGODZX_ULTRA"
 Gui.ResetOnSpawn = false
 
 local Main = Instance.new("Frame", Gui)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-Main.Size = UDim2.new(0, 160, 0, 75)
-Main.Position = UDim2.new(0.5, -80, 0, 20)
+Main.Size = UDim2.new(0, 170, 0, 95)
+Main.Position = UDim2.new(0.5, -85, 0, 30)
 Main.BorderSizePixel = 0
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
 Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 255, 200)
@@ -71,13 +71,13 @@ local Header = Instance.new("TextLabel", Main)
 Header.BackgroundTransparency = 1
 Header.Size = UDim2.new(1, 0, 0, 20)
 Header.Font = Enum.Font.GothamBold
-Header.Text = "AJGODZX BOT v1.0.4"
+Header.Text = "AJGODZX ULTRA v1.0.5"
 Header.TextColor3 = Color3.fromRGB(0, 255, 200)
 Header.TextSize = 10
 
 local StatusLabel = Instance.new("TextLabel", Main)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Position = UDim2.new(0, 10, 0, 25)
+StatusLabel.Position = UDim2.new(0, 10, 0, 22)
 StatusLabel.Size = UDim2.new(1, -20, 0, 15)
 StatusLabel.Font = Enum.Font.GothamMedium
 StatusLabel.Text = "Status: Initializing..."
@@ -87,7 +87,7 @@ StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 
 local StatsLabel = Instance.new("TextLabel", Main)
 StatsLabel.BackgroundTransparency = 1
-StatsLabel.Position = UDim2.new(0, 10, 0, 40)
+StatsLabel.Position = UDim2.new(0, 10, 0, 37)
 StatsLabel.Size = UDim2.new(1, -20, 0, 15)
 StatsLabel.Font = Enum.Font.GothamMedium
 StatsLabel.Text = "Hops: 0 | Pings: 0"
@@ -95,17 +95,27 @@ StatsLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 StatsLabel.TextSize = 9
 StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
 
+local ErrorLabel = Instance.new("TextLabel", Main)
+ErrorLabel.BackgroundTransparency = 1
+ErrorLabel.Position = UDim2.new(0, 10, 0, 52)
+ErrorLabel.Size = UDim2.new(1, -20, 0, 15)
+ErrorLabel.Font = Enum.Font.GothamMedium
+ErrorLabel.Text = "Last Error: None"
+ErrorLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+ErrorLabel.TextSize = 8
+ErrorLabel.TextXAlignment = Enum.TextXAlignment.Left
+
 local HopBtn = Instance.new("TextButton", Main)
 HopBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-HopBtn.Position = UDim2.new(0.05, 0, 0.75, 0)
-HopBtn.Size = UDim2.new(0.9, 0, 0, 15)
+HopBtn.Position = UDim2.new(0.05, 0, 0.78, 0)
+HopBtn.Size = UDim2.new(0.9, 0, 0, 16)
 HopBtn.Font = Enum.Font.GothamBold
-HopBtn.Text = "MANUAL HOP"
+HopBtn.Text = "FORCE SERVER HOP"
 HopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 HopBtn.TextSize = 8
 Instance.new("UICorner", HopBtn).CornerRadius = UDim.new(0, 4)
 
--- Draggable logic
+-- Draggable
 local function makeDraggable(frame)
     local dragging, dragInput, dragStart, startPos
     frame.InputBegan:Connect(function(input)
@@ -130,6 +140,7 @@ makeDraggable(Main)
 local seenIds = {}
 local hopsCount = 0
 local pingsCount = 0
+local isHopping = false
 
 local function updateStatus(text, color)
     StatusLabel.Text = "Status: " .. text
@@ -140,9 +151,16 @@ local function updateStats()
     StatsLabel.Text = "Hops: " .. hopsCount .. " | Pings: " .. pingsCount
 end
 
+local function logError(text)
+    ErrorLabel.Text = "Error: " .. tostring(text)
+end
+
 local function serverHop()
+    if isHopping then return end
+    isHopping = true
     updateStatus("Hopping...", Color3.fromRGB(255, 200, 0))
-    pcall(function()
+    
+    local success, err = pcall(function()
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
         local res = game:HttpGet(url)
         local data = HttpService:JSONDecode(res)
@@ -150,15 +168,22 @@ local function serverHop()
         for _, s in ipairs(data.data) do
             if s.playing < s.maxPlayers and s.id ~= game.JobId then table.insert(servers, s) end
         end
+        
+        if queue_on_teleport then
+            queue_on_teleport([[loadstring(game:HttpGet("https://raw.githubusercontent.com/carinodanielcarl-cmd/LOGGERNOTIF/main/LOGGERFINDER.lua"))()]])
+        end
+
         if #servers > 0 then
             table.sort(servers, function(a, b) return a.playing < b.playing end)
-            local target = servers[1].id
-            if queue_on_teleport then
-                queue_on_teleport([[loadstring(game:HttpGet("https://raw.githubusercontent.com/carinodanielcarl-cmd/LOGGERNOTIF/main/LOGGERFINDER.lua"))()]])
-            end
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, target, lp)
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[1].id, lp)
+            task.wait(2)
         end
+        -- Fallback random hop
+        TeleportService:Teleport(game.PlaceId, lp)
     end)
+    
+    if not success then logError("Hop Fail: " .. tostring(err)) end
+    isHopping = false
 end
 
 HopBtn.MouseButton1Click:Connect(serverHop)
@@ -166,42 +191,54 @@ HopBtn.MouseButton1Click:Connect(serverHop)
 local function postLog(newFinding)
     pcall(function()
         local success, currentRaw = pcall(function() return game:HttpGet(SHARED_URL) end)
-        if not success then return end
+        if not success then logError("Download Error") return end
+        
         local decodeSuccess, currentData = pcall(function() return HttpService:JSONDecode(currentRaw) end)
-        if not decodeSuccess or not currentData then currentData = {findings = {}} end
+        if not decodeSuccess or type(currentData) ~= "table" then currentData = {findings = {}} end
+        if not currentData.findings then currentData.findings = {} end
         
         table.insert(currentData.findings, 1, newFinding)
         if #currentData.findings > 30 then table.remove(currentData.findings, 31) end
         
+        local body = HttpService:JSONEncode(currentData)
         local options = {
             Url = SHARED_URL, Method = "POST",
             Headers = {["Content-Type"] = "application/json"},
-            Body = HttpService:JSONEncode(currentData)
+            Body = body
         }
-        if syn and syn.request then syn.request(options) elseif request then request(options) end
+        
+        if syn and syn.request then syn.request(options)
+        elseif request then request(options)
+        elseif HttpService.RequestAsync then
+            pcall(function() HttpService:RequestAsync(options) end)
+        end
+        
         pingsCount = pingsCount + 1
         updateStats()
     end)
 end
 
 local function scanWorkspace()
-    updateStatus("Scanning...", Color3.fromRGB(0, 255, 200))
     local findings = {}
     local pCount, mPlayers = #Players:GetPlayers(), Players.MaxPlayers
-    for _, item in ipairs(game.Workspace:GetDescendants()) do
-        if item:IsA("Model") or item:IsA("Part") then
-            for _, base in ipairs(allBrainrots) do
-                if item.Name:find(base) then
-                    local mutation = nil
-                    for _, mut in ipairs(Mutations) do if item.Name:find(mut) then mutation = mut break end end
-                    local val = 50000000 
-                    if mutation == "Diamond" or mutation == "Divine" or mutation == "Galaxy" then val = 200000000 end
-                    table.insert(findings, {
-                        name = item.Name, base_name = base, value = val, mutation = mutation,
-                        tier = (val >= 100000000) and "Highlights" or "Midlights",
-                        players = pCount .. "/" .. mPlayers, job_id = game.JobId, timestamp = os.time()
-                    })
-                    break
+    -- Scans children first for speed
+    for _, item in ipairs(game.Workspace:GetChildren()) do
+        if item:IsA("Model") or item:IsA("Part") or item:IsA("Folder") then
+            local targets = item:IsA("Folder") and item:GetChildren() or {item}
+            for _, t in ipairs(targets) do
+                for _, base in ipairs(allBrainrots) do
+                    if t.Name:find(base) then
+                        local mutation = nil
+                        for _, mut in ipairs(Mutations) do if t.Name:find(mut) then mutation = mut break end end
+                        local val = 50000000 
+                        if mutation == "Diamond" or mutation == "Divine" or mutation == "Galaxy" then val = 200000000 end
+                        table.insert(findings, {
+                            name = t.Name, base_name = base, value = val, mutation = mutation,
+                            tier = (val >= 100000000) and "Highlights" or "Midlights",
+                            players = pCount .. "/" .. mPlayers, job_id = game.JobId, timestamp = os.time()
+                        })
+                        break
+                    end
                 end
             end
         end
@@ -210,9 +247,10 @@ local function scanWorkspace()
 end
 
 task.spawn(function()
-    local startTime = tick()
+    local lastHopTime = tick()
     while true do
         pcall(function()
+            updateStatus("Scanning...", Color3.fromRGB(0, 255, 200))
             local findings = scanWorkspace()
             for _, find in ipairs(findings) do
                 local key = find.name .. game.JobId
@@ -224,12 +262,12 @@ task.spawn(function()
             end
         end)
         
-        local elapsed = tick() - startTime
+        local elapsed = tick() - lastHopTime
         if elapsed >= SCAN_TIME_PER_SERVER then
             serverHop()
-            startTime = tick()
+            lastHopTime = tick()
         else
-            updateStatus("Next Hop: " .. math.ceil(SCAN_TIME_PER_SERVER - elapsed) .. "s", Color3.fromRGB(200, 200, 200))
+            updateStatus("Hop in: " .. math.ceil(SCAN_TIME_PER_SERVER - elapsed) .. "s", Color3.fromRGB(200, 200, 200))
         end
         task.wait(SCAN_INTERVAL)
     end
