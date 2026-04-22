@@ -1,5 +1,6 @@
 -- AJGODZX SCANNER BOT (Professional Headless Version)
 -- Automaticaly hops servers, scans for mutation items, and pings logs to AJ Joiner.
+-- VERSION: 1.0.2 (Force Sync)
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -166,7 +167,8 @@ task.spawn(function()
         end)
         
         if (tick() - startTime) >= SCAN_TIME_PER_SERVER then
-            print("📦 [BOT] 5s elapsed. Hopping...")
+            print("📦 [BOT] 5s elapsed. Preparing to hop...")
+            task.wait(0.5) -- Small buffer to ensure final logs are caught
             serverHop()
             startTime = tick() 
         end
