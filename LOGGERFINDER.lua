@@ -256,23 +256,7 @@ local function scanWorkspace()
                     end
 
                     if matched then
-                        -- VERY STRICT REALITY CHECK:
-                        -- Make sure this is an actual collectable item, not a map decoration.
-                        local isInteractive = false
-                        if t:IsA("Tool") then
-                            isInteractive = true
-                        else
-                            for _, desc in ipairs(t:GetDescendants()) do
-                                if desc:IsA("ProximityPrompt") or desc:IsA("TouchInterest") or desc:IsA("ClickDetector") then
-                                    isInteractive = true
-                                    break
-                                end
-                            end
-                        end
-                        
-                        if not isInteractive then
-                            matched = false
-                        end
+
                     end
 
                     if matched then
