@@ -378,13 +378,16 @@ local function scanWorkspace()
                     
                     local cleanTarget = string.lower(string.gsub(t.Name, "[%s%-]", ""))
                     local cleanBase = string.lower(string.gsub(base, "[%s%-]", ""))
-                    
-                    if cleanTarget == cleanBase then
+                    local cleanParent = t.Parent and string.lower(string.gsub(t.Parent.Name, "[%s%-]", "")) or ""
+
+                    -- SUBSTRING MATCHING: Matches even if prefixes like "Los" or "La" are different
+                    if string.find(cleanTarget, cleanBase) or string.find(cleanBase, cleanTarget) or 
+                       (cleanParent ~= "" and string.find(cleanParent, cleanBase)) then
                         matched = true
                     else
                         for _, mut in ipairs(Mutations) do
                             local cleanMut = string.lower(mut)
-                            if cleanTarget == cleanMut .. cleanBase or cleanTarget == cleanBase .. cleanMut then
+                            if string.find(cleanTarget, cleanMut) and string.find(cleanTarget, cleanBase) then
                                 matched = true
                                 mutation = mut
                                 break
