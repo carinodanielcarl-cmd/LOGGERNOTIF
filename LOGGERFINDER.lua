@@ -249,9 +249,15 @@ local function scanWorkspace()
     local pCount, mPlayers = #Players:GetPlayers(), Players.MaxPlayers
     -- Scans children first for speed
     for _, item in ipairs(game.Workspace:GetChildren()) do
+        -- SKIP PLAYER CHARACTERS: This prevents logging items that players are already holding,
+        -- and prevents logging players whose names match brainrots.
+        if Players:GetPlayerFromCharacter(item) then continue end
+
         if item:IsA("Model") or item:IsA("Part") or item:IsA("Folder") then
             local targets = item:IsA("Folder") and item:GetChildren() or {item}
             for _, t in ipairs(targets) do
+                -- Skip if 't' itself is a character (just in case characters are in a folder)
+                if Players:GetPlayerFromCharacter(t) then continue end
                 for _, base in ipairs(allBrainrots) do
                     local matched = false
                     local mutation = nil
