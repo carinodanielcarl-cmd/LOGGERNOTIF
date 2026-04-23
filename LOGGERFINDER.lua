@@ -179,9 +179,19 @@ local function serverHop()
     updateStatus("Hopping...", Color3.fromRGB(255, 200, 0))
     
     local success, err = pcall(function()
-        -- Use a proxy to avoid executors blocking the roblox API
         local url = "https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
-        local res = game:HttpGet(url)
+        
+        local res
+        if syn and syn.request then
+            res = syn.request({Url = url, Method = "GET"}).Body
+        elseif request then
+            res = request({Url = url, Method = "GET"}).Body
+        elseif http_request then
+            res = http_request({Url = url, Method = "GET"}).Body
+        else
+            res = game:HttpGet(url)
+        end
+        
         local data = HttpService:JSONDecode(res)
         local servers = {}
         if data and data.data then
