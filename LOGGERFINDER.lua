@@ -237,7 +237,7 @@ local function scanWorkspace()
                             id = findingId,
                             name = t.Name, base_name = base, value = val, mutation = mutation,
                             tier = (val >= 100000000) and "Highlights" or "Midlights",
-                            players = pCount .. "/" .. mPlayers, job_id = game.JobId, timestamp = os.time()
+                            players = pCount .. "/" .. mPlayers, job_id = game.JobId, place_id = game.PlaceId, timestamp = os.time()
                         })
                         break
                     end
