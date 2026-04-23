@@ -250,6 +250,25 @@ local hopsCount = 0
 local pingsCount = 0
 local isHopping = false
 
+-- Persistent JobID Cache to prevent re-logging the same server
+local function isServerSeen(jobId)
+    if not readfile or not writefile then return false end
+    local success, content = pcall(function() return readfile("aj_seen_servers.txt") end)
+    if success and content then
+        return string.find(content, jobId)
+    end
+    return false
+end
+
+local function markServerSeen(jobId)
+    if not readfile or not writefile then return end
+    local success, content = pcall(function() return readfile("aj_seen_servers.txt") end)
+    local newContent = (success and content or "") .. jobId .. ","
+    -- Keep only the last 1000 characters to prevent file bloat
+    if #newContent > 1000 then newContent = newContent:sub(-1000) end
+    pcall(function() writefile("aj_seen_servers.txt", newContent) end)
+end
+
 local function updateStatus(text, color)
     StatusLabel.Text = "Status: " .. text
     if color then StatusLabel.TextColor3 = color end
@@ -329,7 +348,7 @@ local function postLogBatch(newFindings)
         for _, newFinding in ipairs(newFindings) do
             table.insert(currentData.findings, 1, newFinding)
         end
-        while #currentData.findings > 5 do table.remove(currentData.findings, 6) end
+        while #currentData.findings > 20 do table.remove(currentData.findings, 21) end
         
         local body = HttpService:JSONEncode(currentData)
         local options = {
@@ -447,6 +466,11 @@ task.spawn(function()
     local lastHopTime = tick()
     while true do
         pcall(function()
+            if isServerSeen(game.JobId) then
+                updateStatus("Server Already Logged", Color3.fromRGB(200, 200, 200))
+                return
+            end
+
             updateStatus("Scanning...", Color3.fromRGB(0, 255, 200))
             local findings = scanWorkspace()
             local batchUpload = {}
@@ -460,6 +484,7 @@ task.spawn(function()
             if #batchUpload > 0 then
                 updateStatus("Syncing " .. #batchUpload .. " Pings...", Color3.fromRGB(0, 150, 255))
                 postLogBatch(batchUpload)
+                markServerSeen(game.JobId)
             end
         end)
         
