@@ -182,11 +182,39 @@ local function serverHop()
         if queue_on_teleport then
             queue_on_teleport([[loadstring(game:HttpGet("https://raw.githubusercontent.com/carinodanielcarl-cmd/LOGGERNOTIF/main/LOGGERFINDER.lua"))()]])
         end
-        TeleportService:Teleport(game.PlaceId, lp)
+        
+        -- Bypass HttpService limits by using the executor's native request to the official Roblox API
+        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
+        local res
+        local reqFunction = (syn and syn.request) or request or http_request
+        if reqFunction then
+            res = reqFunction({Url = url, Method = "GET"}).Body
+        else
+            res = game:HttpGet(url)
+        end
+        
+        local data = HttpService:JSONDecode(res)
+        local servers = {}
+        if data and data.data then
+            for _, s in ipairs(data.data) do
+                if type(s) == "table" and s.playing and s.playing < s.maxPlayers and s.id ~= game.JobId then 
+                    table.insert(servers, s.id) 
+                end
+            end
+        end
+
+        if #servers > 0 then
+            local randomId = servers[math.random(1, #servers)]
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, randomId, lp)
+        else
+            TeleportService:Teleport(game.PlaceId, lp)
+        end
     end)
     
     if not success then 
-        logError("Hop Fail: " .. tostring(err)) 
+        logError("Hop Fail: " .. tostring(err):sub(1,20)) 
+        -- If API fails completely, force a standard hop so the bot never gets permanently stuck
+        pcall(function() TeleportService:Teleport(game.PlaceId, lp) end)
         task.wait(2)
         isHopping = false
     end
