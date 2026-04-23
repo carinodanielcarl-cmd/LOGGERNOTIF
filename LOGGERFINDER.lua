@@ -179,7 +179,8 @@ local function serverHop()
     updateStatus("Hopping...", Color3.fromRGB(255, 200, 0))
     
     local success, err = pcall(function()
-        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
+        -- Use a proxy to avoid executors blocking the roblox API
+        local url = "https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
         local res = game:HttpGet(url)
         local data = HttpService:JSONDecode(res)
         local servers = {}
@@ -278,7 +279,11 @@ local function scanWorkspace()
                     if matched then
                         local val = 50000000 
                         if mutation == "Diamond" or mutation == "Divine" or mutation == "Galaxy" then val = 200000000 end
-                        local findingId = game.JobId .. "_" .. t.Name .. "_" .. os.time()
+                        
+                        -- CRITICAL: Do NOT use os.time() here!
+                        -- If we use os.time(), the bot will spam duplicates every second it stays in the server.
+                        local findingId = game.JobId .. "_" .. t.Name .. "_" .. tostring(mutation)
+                        
                         table.insert(findings, {
                             id = findingId,
                             name = t.Name, base_name = base, value = val, mutation = mutation,
