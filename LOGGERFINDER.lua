@@ -375,85 +375,93 @@ local function scanWorkspace()
     local pCount, mPlayers = #Players:GetPlayers(), Players.MaxPlayers
     local serverMax = 0
 
-    -- Helper to format like the TikTok sample (213.7M)
-    local function getVal(obj, baseVal)
-        local v = obj:FindFirstChild("Value") or obj:FindFirstChild("Price") or obj:FindFirstChild("PriceValue")
-        local actual = (v and v:IsA("ValueBase") and v.Value) or baseVal
-        if actual > serverMax then serverMax = actual end
-        return actual
+    -- Helper to extract value and update server max
+    local function processItem(t, base, val, mutation)
+        local vObj = t:FindFirstChild("Value") or t:FindFirstChild("Price") or t:FindFirstChild("PriceValue")
+        local actualVal = (vObj and vObj:IsA("ValueBase") and vObj.Value) or (type(val) == "number" and val or 0)
+        
+        if actualVal > serverMax then serverMax = actualVal end
+        
+        -- High rarity value overrides
+        if mutation == "Diamond" or mutation == "Divine" or mutation == "Galaxy" then 
+            if actualVal < 200000000 then actualVal = 200000000 end
+        end
+
+        local findingId = game.JobId .. "_" .. t.Name .. "_" .. tostring(mutation)
+        local accurate_name = t.Name
+        if mutation and not string.find(accurate_name, mutation) then
+            accurate_name = mutation .. " " .. accurate_name
+        end
+
+        table.insert(findings, {
+            id = findingId,
+            name = accurate_name, 
+            base_name = base, 
+            value = actualVal, 
+            mutation = mutation,
+            tier = (actualVal >= 100000000) and "Highlights" or "Midlights",
+            players = pCount .. "/" .. mPlayers, job_id = game.JobId, place_id = game.PlaceId, timestamp = os.time()
+        })
     end
 
+    local function checkMatch(name)
+        local cleanTarget = string.lower(string.gsub(name, "[%s%-]", ""))
+        if #cleanTarget > 25 and string.find(name, "-") then return nil, nil end -- Skip UUIDs
+        
+        for base, val in pairs(allBrainrots) do
+            local cleanBase = string.lower(string.gsub(base, "[%s%-]", ""))
+            
+            -- Exact match for short names, substring for long names
+            local isMatch = false
+            if #cleanBase <= 3 then
+                isMatch = (cleanTarget == cleanBase)
+            else
+                isMatch = (string.find(cleanTarget, cleanBase) or string.find(cleanBase, cleanTarget))
+            end
+
+            if isMatch then
+                return base, val, nil
+            end
+            
+            -- Mutation check
+            for _, mut in ipairs(Mutations) do
+                local cleanMut = string.lower(mut)
+                if string.find(cleanTarget, cleanMut) and string.find(cleanTarget, cleanBase) then
+                    return base, val, mut
+                end
+            end
+        end
+        return nil, nil, nil
+    end
+
+    -- SCAN 1: THE GROUND (Workspace)
     for _, item in ipairs(game.Workspace:GetChildren()) do
         if Players:GetPlayerFromCharacter(item) then continue end
+        local targets = item:IsA("Folder") and item:GetChildren() or {item}
+        for _, t in ipairs(targets) do
+            if Players:GetPlayerFromCharacter(t) then continue end
+            if t:IsA("Model") or t:IsA("Part") or t:IsA("Tool") then
+                local base, val, mut = checkMatch(t.Name)
+                if base then processItem(t, base, val, mut) end
+            end
+        end
+    end
 
-        if item:IsA("Model") or item:IsA("Part") or item:IsA("Folder") then
-            local targets = item:IsA("Folder") and item:GetChildren() or {item}
-            for _, t in ipairs(targets) do
-                if Players:GetPlayerFromCharacter(t) then continue end
-                
-                for base, val in pairs(allBrainrots) do
-                    local matched = false
-                    local mutation = nil
-                    
-                    local cleanTarget = string.lower(string.gsub(t.Name, "[%s%-]", ""))
-                    local cleanBase = string.lower(string.gsub(base, "[%s%-]", ""))
-                    local cleanParent = t.Parent and string.lower(string.gsub(t.Parent.Name, "[%s%-]", "")) or ""
+    -- SCAN 2: PLAYER INVENTORIES (Carried items)
+    for _, player in ipairs(Players:GetPlayers()) do
+        local inv = {}
+        if player.Character then 
+            for _, c in ipairs(player.Character:GetChildren()) do table.insert(inv, c) end
+        end
+        local bp = player:FindFirstChild("Backpack")
+        if bp then
+            for _, c in ipairs(bp:GetChildren()) do table.insert(inv, c) end
+        end
 
-                    -- UUID/ID Filter: Ignore names that are too long or look like server IDs
-                    local isUUID = (#t.Name > 25 and string.find(t.Name, "-"))
-                    
-                    if not isUUID then
-                        -- Precise matching for short names (like "67") to avoid fake matches
-                        if #cleanBase <= 3 then
-                            if cleanTarget == cleanBase or cleanParent == cleanBase then
-                                matched = true
-                            end
-                        else
-                            -- Substring matching for longer, unique names
-                            if string.find(cleanTarget, cleanBase) or string.find(cleanBase, cleanTarget) or 
-                               (cleanParent ~= "" and string.find(cleanParent, cleanBase)) then
-                                matched = true
-                            end
-                        end
-                        
-                        -- Mutation Check
-                        if not matched then
-                            for _, mut in ipairs(Mutations) do
-                                local cleanMut = string.lower(mut)
-                                if string.find(cleanTarget, cleanMut) and string.find(cleanTarget, cleanBase) then
-                                    matched = true
-                                    mutation = mut
-                                    break
-                                end
-                            end
-                        end
-                    end
-
-                    if matched then
-                        local baseValue = type(val) == "number" and val or 50000000
-                        local finalVal = getVal(t, baseValue)
-                        if mutation == "Diamond" or mutation == "Divine" or mutation == "Galaxy" then finalVal = 200000000 end
-                        
-                        local findingId = game.JobId .. "_" .. t.Name .. "_" .. tostring(mutation)
-                        
-                        -- Report the ACCURATE game name so the user knows exactly what it is
-                        local accurate_name = t.Name
-                        if mutation and not string.find(accurate_name, mutation) then
-                            accurate_name = mutation .. " " .. accurate_name
-                        end
-
-                        table.insert(findings, {
-                            id = findingId,
-                            name = accurate_name, 
-                            base_name = base, 
-                            value = finalVal, 
-                            mutation = mutation,
-                            tier = (finalVal >= 100000000) and "Highlights" or "Midlights",
-                            players = pCount .. "/" .. mPlayers, job_id = game.JobId, place_id = game.PlaceId, timestamp = os.time()
-                        })
-                        break
-                    end
-                end
+        for _, t in ipairs(inv) do
+            if t:IsA("Tool") or t:IsA("Model") then
+                local base, val, mut = checkMatch(t.Name)
+                if base then processItem(t, base, val, mut) end
             end
         end
     end
