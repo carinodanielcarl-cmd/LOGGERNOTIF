@@ -376,7 +376,7 @@ local function scanWorkspace()
     local serverMax = 0
 
     -- Helper to extract value and update server max
-    local function processItem(t, base, val, mutation)
+    local function processItem(t, base, val, mutation, owner)
         local vObj = t:FindFirstChild("Value") or t:FindFirstChild("Price") or t:FindFirstChild("PriceValue")
         local actualVal = (vObj and vObj:IsA("ValueBase") and vObj.Value) or (type(val) == "number" and val or 0)
         
@@ -387,16 +387,21 @@ local function scanWorkspace()
             if actualVal < 200000000 then actualVal = 200000000 end
         end
 
-        local findingId = game.JobId .. "_" .. t.Name .. "_" .. tostring(mutation)
+        local findingId = game.JobId .. "_" .. t.Name .. "_" .. tostring(mutation) .. "_" .. tostring(owner)
         local accurate_name = t.Name
         if mutation and not string.find(accurate_name, mutation) then
             accurate_name = mutation .. " " .. accurate_name
+        end
+        
+        -- Add owner info to name if found in inventory
+        if owner then
+            accurate_name = accurate_name .. " (Held by " .. owner .. ")"
         end
 
         table.insert(findings, {
             id = findingId,
             name = accurate_name, 
-            base_name = base, 
+            base_name = base or "discovered", 
             value = actualVal, 
             mutation = mutation,
             tier = (actualVal >= 100000000) and "Highlights" or "Midlights",
@@ -442,13 +447,22 @@ local function scanWorkspace()
             if Players:GetPlayerFromCharacter(t) then continue end
             if t:IsA("Model") or t:IsA("Part") or t:IsA("Tool") then
                 local base, val, mut = checkMatch(t.Name)
-                if base then processItem(t, base, val, mut) end
+                if base then 
+                    processItem(t, base, val, mut, nil) 
+                else
+                    -- DISCOVERY MODE: Log anything with a Value > 50M even if not on whitelist
+                    local vObj = t:FindFirstChild("Value") or t:FindFirstChild("Price") or t:FindFirstChild("PriceValue")
+                    if vObj and vObj:IsA("ValueBase") and vObj.Value >= 50000000 then
+                        processItem(t, nil, vObj.Value, nil, nil)
+                    end
+                end
             end
         end
     end
 
     -- SCAN 2: PLAYER INVENTORIES (Carried items)
     for _, player in ipairs(Players:GetPlayers()) do
+        if player == lp then continue end
         local inv = {}
         if player.Character then 
             for _, c in ipairs(player.Character:GetChildren()) do table.insert(inv, c) end
@@ -461,7 +475,15 @@ local function scanWorkspace()
         for _, t in ipairs(inv) do
             if t:IsA("Tool") or t:IsA("Model") then
                 local base, val, mut = checkMatch(t.Name)
-                if base then processItem(t, base, val, mut) end
+                if base then 
+                    processItem(t, base, val, mut, player.Name) 
+                else
+                    -- DISCOVERY MODE for inventories
+                    local vObj = t:FindFirstChild("Value") or t:FindFirstChild("Price") or t:FindFirstChild("PriceValue")
+                    if vObj and vObj:IsA("ValueBase") and vObj.Value >= 50000000 then
+                        processItem(t, nil, vObj.Value, nil, player.Name)
+                    end
+                end
             end
         end
     end
