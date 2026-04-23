@@ -227,7 +227,17 @@ local function scanWorkspace()
             local targets = item:IsA("Folder") and item:GetChildren() or {item}
             for _, t in ipairs(targets) do
                 for _, base in ipairs(allBrainrots) do
-                    if t.Name:find(base) then
+                    -- Escape special pattern characters in base name
+                    local escaped = base:gsub("([%(%)%.%%%+%-%*%?%[%^%$])", "%%%1")
+                    local matched = false
+                    if #base <= 4 then
+                        -- Short names (67, 25, GOAT) require exact match only
+                        matched = (t.Name == base)
+                    else
+                        -- Longer names: allow exact, starts with, or ends with
+                        matched = (t.Name == base) or t.Name:match("^" .. escaped) or t.Name:match(escaped .. "$")
+                    end
+                    if matched then
                         local mutation = nil
                         for _, mut in ipairs(Mutations) do if t.Name:find(mut) then mutation = mut break end end
                         local val = 50000000 
