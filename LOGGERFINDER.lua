@@ -232,7 +232,9 @@ local function scanWorkspace()
                         for _, mut in ipairs(Mutations) do if t.Name:find(mut) then mutation = mut break end end
                         local val = 50000000 
                         if mutation == "Diamond" or mutation == "Divine" or mutation == "Galaxy" then val = 200000000 end
+                        local findingId = game.JobId .. "_" .. t.Name .. "_" .. os.time()
                         table.insert(findings, {
+                            id = findingId,
                             name = t.Name, base_name = base, value = val, mutation = mutation,
                             tier = (val >= 100000000) and "Highlights" or "Midlights",
                             players = pCount .. "/" .. mPlayers, job_id = game.JobId, timestamp = os.time()
