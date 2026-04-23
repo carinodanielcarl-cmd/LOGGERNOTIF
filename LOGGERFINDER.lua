@@ -394,7 +394,7 @@ local function scanWorkspace()
         
         for _, base in ipairs(allBrainrots) do
             local cleanBase = string.lower(string.gsub(base, "[%s%-]", ""))
-            local val = 0 -- Default value for generic items
+            local defaultVal = 50000000 -- Default 50M for whitelisted items
             
             -- Exact match for short names, substring for long names
             local isMatch = false
@@ -405,14 +405,14 @@ local function scanWorkspace()
             end
 
             if isMatch then
-                return base, val, nil
+                return base, defaultVal, nil
             end
             
             -- Mutation check
             for _, mut in ipairs(Mutations) do
                 local cleanMut = string.lower(mut)
                 if string.find(cleanTarget, cleanMut) and string.find(cleanTarget, cleanBase) then
-                    return base, val, mut
+                    return base, defaultVal, mut
                 end
             end
         end
@@ -432,8 +432,8 @@ local function scanWorkspace()
                 else
                     -- DISCOVERY MODE: Log anything with a Value > 50M even if not on whitelist
                     local vObj = t:FindFirstChild("Value") or t:FindFirstChild("Price") or t:FindFirstChild("PriceValue")
-                    if vObj and vObj:IsA("ValueBase") and vObj.Value >= 50000000 then
-                        processItem(t, nil, vObj.Value, nil, nil)
+                    if vObj and vObj:IsA("ValueBase") and vObj.Value >= 1000000 then
+                        processItem(t, "Discovered", vObj.Value, nil, nil)
                     end
                 end
             end
@@ -460,8 +460,8 @@ local function scanWorkspace()
                 else
                     -- DISCOVERY MODE for inventories
                     local vObj = t:FindFirstChild("Value") or t:FindFirstChild("Price") or t:FindFirstChild("PriceValue")
-                    if vObj and vObj:IsA("ValueBase") and vObj.Value >= 50000000 then
-                        processItem(t, nil, vObj.Value, nil, player.Name)
+                    if vObj and vObj:IsA("ValueBase") and vObj.Value >= 1000000 then
+                        processItem(t, "Discovered", vObj.Value, nil, player.Name)
                     end
                 end
             end

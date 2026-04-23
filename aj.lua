@@ -75,6 +75,16 @@ local function playNotifSound()
     if userSettings.PlaySound then NotifSound:Play() end
 end
 
+local function formatNumber(n)
+    n = tonumber(n) or 0
+    if n >= 1000000 then
+        return (string.format("%.1fM", n / 1000000)):gsub("%.0M", "M")
+    elseif n >= 1000 then
+        return (string.format("%.1fK", n / 1000)):gsub("%.0K", "K")
+    end
+    return tostring(n)
+end
+
 local function sendWebhook(data)
     if not userSettings.WebhookEnabled or not WEBHOOK_URL or WEBHOOK_URL == "" then return end
     
@@ -88,7 +98,7 @@ local function sendWebhook(data)
                 {["name"] = "Value", ["value"] = "```" .. formatNumber(data.value or 0) .. "```", ["inline"] = true},
                 {["name"] = "Mutation", ["value"] = "```" .. (data.mutation or "Normal") .. "```", ["inline"] = true},
                 {["name"] = "Server Info", ["value"] = "```" .. (data.players or "0/0") .. " Players```", ["inline"] = false},
-                {["name"] = "Join Command", ["value"] = "```game:GetService('TeleportService'):TeleportToPlaceInstance(" .. data.place_id .. ", '" .. data.job_id .. "')```", ["inline"] = false}
+                {["name"] = "Join Command", ["value"] = "```game:GetService('TeleportService'):TeleportToPlaceInstance(" .. (data.place_id or 0) .. ", '" .. (data.job_id or "") .. "')```", ["inline"] = false}
             },
             ["footer"] = {["text"] = "AJGODZX Premium • " .. os.date("%X")},
             ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
@@ -105,20 +115,9 @@ local function sendWebhook(data)
                 Body = HttpService:JSONEncode(payload)
             })
         else
-            -- Fallback for basic executors
             HttpService:PostAsync(WEBHOOK_URL, HttpService:JSONEncode(payload))
         end
     end)
-end
-
-local function formatNumber(n)
-    n = tonumber(n) or 0
-    if n >= 1000000 then
-        return (string.format("%.1fM", n / 1000000)):gsub("%.0M", "M")
-    elseif n >= 1000 then
-        return (string.format("%.1fK", n / 1000)):gsub("%.0K", "K")
-    end
-    return tostring(n)
 end
 
 -- [[ GUI CONSTRUCTION ]] --
@@ -226,10 +225,21 @@ local function addLogEntry(data)
     valL.Position = UDim2.new(0, 12, 0, 30)
     valL.BackgroundTransparency = 1
     valL.TextXAlignment = Enum.TextXAlignment.Left
-    valL.Text = formatNumber(data.value or 0) .. " • " .. (data.mutation or "Normal") .. " • " .. (data.players or "0/0")
+    
+    local ts = data.timestamp or os.time()
+    task.spawn(function()
+        while card.Parent and _G.AJRunning do
+            local diff = os.time() - ts
+            local timeStr = diff < 60 and (diff .. "s ago") or (math.floor(diff/60) .. "m ago")
+            valL.Text = formatNumber(data.value or 0) .. " • " .. (data.mutation or "Normal") .. " • " .. timeStr
+            task.wait(1)
+        end
+    end)
+    
     valL.Font = Enum.Font.Gotham
     valL.TextSize = 11
     valL.TextColor3 = T.TextDim
+    valL.Parent = card
 
     local jBtn = Instance.new("TextButton", card)
     jBtn.Size = UDim2.new(0, 45, 0, 26)
@@ -253,14 +263,11 @@ local function addLogEntry(data)
 
     jBtn.MouseButton1Click:Connect(function()
         if not data.job_id then return end
-        
         local targetPlace = data.place_id or STEAL_BRAINROT_PLACE_ID
         jBtn.Text = "..."
-        
         local success, err = pcall(function()
             TeleportService:TeleportToPlaceInstance(targetPlace, data.job_id, lp)
         end)
-        
         if not success then
             warn("Teleport failed: " .. tostring(err))
             jBtn.Text = "FAIL"
@@ -289,7 +296,8 @@ task.spawn(function()
                         seenIds[finding.id] = true
                         addLogEntry(finding)
                         if userSettings.AutoJoin then
-                            TeleportService:TeleportToPlaceInstance(STEAL_BRAINROT_PLACE_ID, finding.job_id, lp)
+                            local targetPlace = finding.place_id or STEAL_BRAINROT_PLACE_ID
+                            TeleportService:TeleportToPlaceInstance(targetPlace, finding.job_id, lp)
                         end
                     end
                 end
