@@ -406,7 +406,6 @@ local function scanWorkspace()
                 end
             end
         end
-    end
     return findings
 end
 
