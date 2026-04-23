@@ -391,9 +391,9 @@ local function scanWorkspace()
                         })
                         break
                     end
-                end
             end
         end
+    end
     return findings
 end
 
