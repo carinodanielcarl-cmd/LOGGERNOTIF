@@ -183,8 +183,12 @@ local function serverHop()
         local res = game:HttpGet(url)
         local data = HttpService:JSONDecode(res)
         local servers = {}
-        for _, s in ipairs(data.data) do
-            if s.playing < s.maxPlayers and s.id ~= game.JobId then table.insert(servers, s) end
+        if data and data.data then
+            for _, s in ipairs(data.data) do
+                if type(s) == "table" and s.playing and s.playing < s.maxPlayers and s.id ~= game.JobId then 
+                    table.insert(servers, s.id) 
+                end
+            end
         end
         
         if queue_on_teleport then
@@ -192,16 +196,20 @@ local function serverHop()
         end
 
         if #servers > 0 then
-            table.sort(servers, function(a, b) return a.playing < b.playing end)
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[1].id, lp)
-            task.wait(2)
+            -- Pick a random server from the list so we don't get stuck on broken ones
+            local randomId = servers[math.random(1, #servers)]
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, randomId, lp)
+        else
+            -- Fallback only if we didn't find any servers
+            TeleportService:Teleport(game.PlaceId, lp)
         end
-        -- Fallback random hop
-        TeleportService:Teleport(game.PlaceId, lp)
     end)
     
-    if not success then logError("Hop Fail: " .. tostring(err)) end
-    isHopping = false
+    if not success then 
+        logError("Hop Fail: " .. tostring(err)) 
+        task.wait(2)
+        isHopping = false
+    end
 end
 
 HopBtn.MouseButton1Click:Connect(serverHop)
