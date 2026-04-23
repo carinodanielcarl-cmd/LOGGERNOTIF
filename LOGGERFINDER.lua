@@ -179,41 +179,10 @@ local function serverHop()
     updateStatus("Hopping...", Color3.fromRGB(255, 200, 0))
     
     local success, err = pcall(function()
-        local url = "https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
-        
-        local res
-        if syn and syn.request then
-            res = syn.request({Url = url, Method = "GET"}).Body
-        elseif request then
-            res = request({Url = url, Method = "GET"}).Body
-        elseif http_request then
-            res = http_request({Url = url, Method = "GET"}).Body
-        else
-            res = game:HttpGet(url)
-        end
-        
-        local data = HttpService:JSONDecode(res)
-        local servers = {}
-        if data and data.data then
-            for _, s in ipairs(data.data) do
-                if type(s) == "table" and s.playing and s.playing < s.maxPlayers and s.id ~= game.JobId then 
-                    table.insert(servers, s.id) 
-                end
-            end
-        end
-        
         if queue_on_teleport then
             queue_on_teleport([[loadstring(game:HttpGet("https://raw.githubusercontent.com/carinodanielcarl-cmd/LOGGERNOTIF/main/LOGGERFINDER.lua"))()]])
         end
-
-        if #servers > 0 then
-            -- Pick a random server from the list so we don't get stuck on broken ones
-            local randomId = servers[math.random(1, #servers)]
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, randomId, lp)
-        else
-            -- Fallback only if we didn't find any servers
-            TeleportService:Teleport(game.PlaceId, lp)
-        end
+        TeleportService:Teleport(game.PlaceId, lp)
     end)
     
     if not success then 
@@ -287,7 +256,27 @@ local function scanWorkspace()
                     end
 
                     if matched then
-                        local val = 50000000 
+                        -- VERY STRICT REALITY CHECK:
+                        -- Make sure this is an actual collectable item, not a map decoration.
+                        local isInteractive = false
+                        if t:IsA("Tool") then
+                            isInteractive = true
+                        else
+                            for _, desc in ipairs(t:GetDescendants()) do
+                                if desc:IsA("ProximityPrompt") or desc:IsA("TouchInterest") or desc:IsA("ClickDetector") then
+                                    isInteractive = true
+                                    break
+                                end
+                            end
+                        end
+                        
+                        if not isInteractive then
+                            matched = false
+                        end
+                    end
+
+                    if matched then
+                        local val = 50000000  
                         if mutation == "Diamond" or mutation == "Divine" or mutation == "Galaxy" then val = 200000000 end
                         
                         -- CRITICAL: Do NOT use os.time() here!
