@@ -252,7 +252,20 @@ local function addLogEntry(data)
     Instance.new("UICorner", cBtn).CornerRadius = UDim.new(0, 5)
 
     jBtn.MouseButton1Click:Connect(function()
-        TeleportService:TeleportToPlaceInstance(STEAL_BRAINROT_PLACE_ID, data.job_id, lp)
+        if not data.job_id then return end
+        
+        local targetPlace = data.place_id or STEAL_BRAINROT_PLACE_ID
+        jBtn.Text = "..."
+        
+        local success, err = pcall(function()
+            TeleportService:TeleportToPlaceInstance(targetPlace, data.job_id, lp)
+        end)
+        
+        if not success then
+            warn("Teleport failed: " .. tostring(err))
+            jBtn.Text = "FAIL"
+            task.delay(1, function() jBtn.Text = "JOIN" end)
+        end
     end)
     
     cBtn.MouseButton1Click:Connect(function()
