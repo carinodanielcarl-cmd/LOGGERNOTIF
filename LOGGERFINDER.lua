@@ -359,6 +359,9 @@ local function scanWorkspace()
         local vObj = t:FindFirstChild("Value") or t:FindFirstChild("Price") or t:FindFirstChild("PriceValue")
         local actualVal = (vObj and vObj:IsA("ValueBase") and vObj.Value) or (type(val) == "number" and val or 0)
         
+        -- Quality Filter: Skip 0-value items
+        if actualVal <= 0 then return end
+        
         if actualVal > serverMax then serverMax = actualVal end
         
         -- High rarity value overrides
@@ -366,7 +369,8 @@ local function scanWorkspace()
             if actualVal < 200000000 then actualVal = 200000000 end
         end
 
-        local findingId = game.JobId .. "_" .. t.Name .. "_" .. tostring(mutation) .. "_" .. tostring(owner)
+        -- Unique ID with timestamp to ensure "Real" logs
+        local findingId = game.JobId .. "_" .. t.Name .. "_" .. tostring(mutation) .. "_" .. tostring(owner) .. "_" .. tick()
         local accurate_name = t.Name
         if mutation and not string.find(accurate_name, mutation) then
             accurate_name = mutation .. " " .. accurate_name
@@ -389,19 +393,22 @@ local function scanWorkspace()
     end
 
     local function checkMatch(name)
+        if not name or #name < 2 then return nil, nil, nil end
         local cleanTarget = string.lower(string.gsub(name, "[%s%-]", ""))
-        if #cleanTarget > 25 and string.find(name, "-") then return nil, nil end -- Skip UUIDs
+        if #cleanTarget > 30 and string.find(name, "-") then return nil, nil, nil end -- Strict UUID filter
         
         for _, base in ipairs(allBrainrots) do
             local cleanBase = string.lower(string.gsub(base, "[%s%-]", ""))
-            local defaultVal = 50000000 -- Default 50M for whitelisted items
+            local defaultVal = 50000000 
             
-            -- Exact match for short names, substring for long names
+            -- STRICT MATCHING: Prevents "67" from matching random IDs
             local isMatch = false
             if #cleanBase <= 3 then
+                -- Short names (like "67", "Sis") MUST be an exact match
                 isMatch = (cleanTarget == cleanBase)
             else
-                isMatch = (string.find(cleanTarget, cleanBase) or string.find(cleanBase, cleanTarget))
+                -- Long names can be a substring but must be significant
+                isMatch = (cleanTarget == cleanBase or string.find(cleanTarget, "^" .. cleanBase) or string.find(cleanTarget, cleanBase .. "$"))
             end
 
             if isMatch then
@@ -430,10 +437,10 @@ local function scanWorkspace()
                 if base then 
                     processItem(t, base, val, mut, nil) 
                 else
-                    -- DISCOVERY MODE: Log anything with a Value > 50M even if not on whitelist
+                    -- DISCOVERY MODE: Only log unknown items if they are EXTREMELY valuable
                     local vObj = t:FindFirstChild("Value") or t:FindFirstChild("Price") or t:FindFirstChild("PriceValue")
-                    if vObj and vObj:IsA("ValueBase") and vObj.Value >= 1000000 then
-                        processItem(t, "Discovered", vObj.Value, nil, nil)
+                    if vObj and vObj:IsA("ValueBase") and vObj.Value >= 100000000 then
+                        processItem(t, "Unknown High-Value", vObj.Value, nil, nil)
                     end
                 end
             end
