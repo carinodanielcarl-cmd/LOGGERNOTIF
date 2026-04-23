@@ -14,6 +14,44 @@ local lp = Players.LocalPlayer
 local SCAN_INTERVAL = 1.0
 local SCAN_TIME_PER_SERVER = 5 
 local SHARED_URL = "https://api.npoint.io/3b590339f6bef0db0dfd" 
+local CONFIG_FILE = "aj_scanner_config.json"
+
+local userSettings = {
+    Whitelist = {},
+    PlaySound = true,
+    MinPingValue = 50000000
+}
+
+-- LOAD CONFIG
+pcall(function()
+    if isfile and readfile and isfile(CONFIG_FILE) then
+        local saved = HttpService:JSONDecode(readfile(CONFIG_FILE))
+        if type(saved) == "table" then
+            for k, v in pairs(saved) do
+                if k == "Whitelist" and type(v) == "table" then
+                    for wk, wv in pairs(v) do userSettings.Whitelist[wk] = wv end
+                else
+                    userSettings[k] = v
+                end
+            end
+        end
+    end
+end)
+
+-- AUTO SAVE
+task.spawn(function()
+    local lastSave = HttpService:JSONEncode(userSettings)
+    while true do
+        task.wait(3)
+        pcall(function()
+            local current = HttpService:JSONEncode(userSettings)
+            if current ~= lastSave then
+                if writefile then writefile(CONFIG_FILE, current) end
+                lastSave = current
+            end
+        end)
+    end
+end) 
 
 -- Mutation detection
 local Mutations = {"Diamond", "Gold", "Cyber", "Rainbow", "Candy", "Divine", "Galaxy", "Radioactive", "YinYang", "Halloween", "Christmas"}
@@ -70,6 +108,29 @@ local allBrainrots = {
     "Chicleteirina Bicicleteirina", "Granny", "Los Bunitos", "Los Quesadillas",
     "Bunito Bunito Spinito", "Noo My Candy"
 }
+
+local NotifSound = Instance.new("Sound")
+NotifSound.Name = "LacedNotifSound"
+NotifSound.SoundId = "rbxassetid://4590662766"
+NotifSound.Volume = 1
+NotifSound.Parent = game:GetService("SoundService")
+
+local function playNotifSound()
+    if userSettings.PlaySound then NotifSound:Play() end
+end
+
+local function formatNumber(n)
+    n = tonumber(n) or 0
+    if n >= 1000000 then
+        local formatted = string.format("%.1fM", n / 1000000)
+        return formatted:gsub("%.0M", "M")
+    elseif n >= 1000 then
+        local formatted = string.format("%.1fK", n / 1000)
+        return formatted:gsub("%.0K", "K")
+    else
+        return tostring(n)
+    end
+end
 
 -- [[ UI CREATION ]] --
 local Gui = Instance.new("ScreenGui", game:GetService("CoreGui") or lp.PlayerGui)
@@ -196,8 +257,7 @@ end
 local function updateStats(serverMax)
     StatsLabel.Text = "Hops: " .. hopsCount .. " | Pings: " .. pingsCount
     if serverMax then
-        local millions = serverMax / 1000000
-        MaxValLabel.Text = "MAX: " .. string.format("%.1fM", millions)
+        MaxValLabel.Text = "MAX: " .. formatNumber(serverMax)
     end
 end
 
@@ -436,6 +496,7 @@ task.spawn(function()
                 table.sort(batchUpload, function(a, b) return a.value > b.value end)
                 local peakFinding = { batchUpload[1] }
                 
+                playNotifSound()
                 updateStatus("Syncing Peak Finding...", Color3.fromRGB(0, 150, 255))
                 postLogBatch(peakFinding)
                 markServerSeen(game.JobId)
