@@ -193,9 +193,19 @@ StatsLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 StatsLabel.TextSize = 9
 StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
 
+local MaxValLabel = Instance.new("TextLabel", Main)
+MaxValLabel.BackgroundTransparency = 1
+MaxValLabel.Position = UDim2.new(0, 10, 0, 52)
+MaxValLabel.Size = UDim2.new(1, -20, 0, 20)
+MaxValLabel.Font = Enum.Font.GothamBold
+MaxValLabel.Text = "MAX: 0M"
+MaxValLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
+MaxValLabel.TextSize = 16
+MaxValLabel.TextXAlignment = Enum.TextXAlignment.Left
+
 local ErrorLabel = Instance.new("TextLabel", Main)
 ErrorLabel.BackgroundTransparency = 1
-ErrorLabel.Position = UDim2.new(0, 10, 0, 52)
+ErrorLabel.Position = UDim2.new(0, 10, 0, 72)
 ErrorLabel.Size = UDim2.new(1, -20, 0, 15)
 ErrorLabel.Font = Enum.Font.GothamMedium
 ErrorLabel.Text = "Last Error: None"
@@ -205,8 +215,8 @@ ErrorLabel.TextXAlignment = Enum.TextXAlignment.Left
 
 local HopBtn = Instance.new("TextButton", Main)
 HopBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-HopBtn.Position = UDim2.new(0.05, 0, 0.78, 0)
-HopBtn.Size = UDim2.new(0.9, 0, 0, 16)
+HopBtn.Position = UDim2.new(0.05, 0, 0.9, 0)
+HopBtn.Size = UDim2.new(0.9, 0, 0, 14)
 HopBtn.Font = Enum.Font.GothamBold
 HopBtn.Text = "FORCE SERVER HOP"
 HopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -245,8 +255,12 @@ local function updateStatus(text, color)
     if color then StatusLabel.TextColor3 = color end
 end
 
-local function updateStats()
+local function updateStats(serverMax)
     StatsLabel.Text = "Hops: " .. hopsCount .. " | Pings: " .. pingsCount
+    if serverMax then
+        local millions = serverMax / 1000000
+        MaxValLabel.Text = "MAX: " .. string.format("%.1fM", millions)
+    end
 end
 
 local function logError(text)
@@ -340,21 +354,28 @@ end
 local function scanWorkspace()
     local findings = {}
     local pCount, mPlayers = #Players:GetPlayers(), Players.MaxPlayers
-    -- Scans children first for speed
+    local serverMax = 0
+
+    -- Helper to format like the TikTok sample (213.7M)
+    local function getVal(obj, baseVal)
+        local v = obj:FindFirstChild("Value") or obj:FindFirstChild("Price") or obj:FindFirstChild("PriceValue")
+        local actual = (v and v:IsA("ValueBase") and v.Value) or baseVal
+        if actual > serverMax then serverMax = actual end
+        return actual
+    end
+
     for _, item in ipairs(game.Workspace:GetChildren()) do
-        -- SKIP PLAYER CHARACTERS
         if Players:GetPlayerFromCharacter(item) then continue end
 
         if item:IsA("Model") or item:IsA("Part") or item:IsA("Folder") then
             local targets = item:IsA("Folder") and item:GetChildren() or {item}
             for _, t in ipairs(targets) do
-                -- Skip if 't' itself is a character
                 if Players:GetPlayerFromCharacter(t) then continue end
+                
                 for base, val in pairs(allBrainrots) do
                     local matched = false
                     local mutation = nil
                     
-                    -- FUZZY MATCH: Remove all spaces and hyphens, and make lowercase
                     local cleanTarget = string.lower(string.gsub(t.Name, "[%s%-]", ""))
                     local cleanBase = string.lower(string.gsub(base, "[%s%-]", ""))
                     
@@ -372,20 +393,24 @@ local function scanWorkspace()
                     end
 
                     if matched then
-                        -- Override value if it's an extreme rarity mutation
-                        local finalVal = type(val) == "number" and val or 50000000
+                        local baseValue = type(val) == "number" and val or 50000000
+                        local finalVal = getVal(t, baseValue)
                         if mutation == "Diamond" or mutation == "Divine" or mutation == "Galaxy" then finalVal = 200000000 end
                         
-                        -- CRITICAL: Do NOT use os.time() here!
                         local findingId = game.JobId .. "_" .. t.Name .. "_" .. tostring(mutation)
                         
-                        -- Set name to base so aj.lua shows the exact config string!
-                        local display_name = base
-                        if mutation then display_name = mutation .. " " .. base end
+                        -- Report the ACCURATE game name so the user knows exactly what it is
+                        local accurate_name = t.Name
+                        if mutation and not string.find(accurate_name, mutation) then
+                            accurate_name = mutation .. " " .. accurate_name
+                        end
 
                         table.insert(findings, {
                             id = findingId,
-                            name = display_name, base_name = base, value = finalVal, mutation = mutation,
+                            name = accurate_name, 
+                            base_name = base, 
+                            value = finalVal, 
+                            mutation = mutation,
                             tier = (finalVal >= 100000000) and "Highlights" or "Midlights",
                             players = pCount .. "/" .. mPlayers, job_id = game.JobId, place_id = game.PlaceId, timestamp = os.time()
                         })
@@ -395,6 +420,8 @@ local function scanWorkspace()
             end
         end
     end
+    
+    updateStats(serverMax)
     return findings
 end
 
