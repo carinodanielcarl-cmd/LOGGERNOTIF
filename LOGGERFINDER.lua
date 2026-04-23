@@ -380,17 +380,32 @@ local function scanWorkspace()
                     local cleanBase = string.lower(string.gsub(base, "[%s%-]", ""))
                     local cleanParent = t.Parent and string.lower(string.gsub(t.Parent.Name, "[%s%-]", "")) or ""
 
-                    -- SUBSTRING MATCHING: Matches even if prefixes like "Los" or "La" are different
-                    if string.find(cleanTarget, cleanBase) or string.find(cleanBase, cleanTarget) or 
-                       (cleanParent ~= "" and string.find(cleanParent, cleanBase)) then
-                        matched = true
-                    else
-                        for _, mut in ipairs(Mutations) do
-                            local cleanMut = string.lower(mut)
-                            if string.find(cleanTarget, cleanMut) and string.find(cleanTarget, cleanBase) then
+                    -- UUID/ID Filter: Ignore names that are too long or look like server IDs
+                    local isUUID = (#t.Name > 25 and string.find(t.Name, "-"))
+                    
+                    if not isUUID then
+                        -- Precise matching for short names (like "67") to avoid fake matches
+                        if #cleanBase <= 3 then
+                            if cleanTarget == cleanBase or cleanParent == cleanBase then
                                 matched = true
-                                mutation = mut
-                                break
+                            end
+                        else
+                            -- Substring matching for longer, unique names
+                            if string.find(cleanTarget, cleanBase) or string.find(cleanBase, cleanTarget) or 
+                               (cleanParent ~= "" and string.find(cleanParent, cleanBase)) then
+                                matched = true
+                            end
+                        end
+                        
+                        -- Mutation Check
+                        if not matched then
+                            for _, mut in ipairs(Mutations) do
+                                local cleanMut = string.lower(mut)
+                                if string.find(cleanTarget, cleanMut) and string.find(cleanTarget, cleanBase) then
+                                    matched = true
+                                    mutation = mut
+                                    break
+                                end
                             end
                         end
                     end
