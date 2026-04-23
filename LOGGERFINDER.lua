@@ -342,15 +342,26 @@ local function scanWorkspace()
     local pCount, mPlayers = #Players:GetPlayers(), Players.MaxPlayers
     -- Scans children first for speed
     for _, item in ipairs(game.Workspace:GetChildren()) do
-        -- SKIP PLAYER CHARACTERS: This prevents logging items that players are already holding,
-        -- and prevents logging players whose names match brainrots.
+        -- SKIP PLAYER CHARACTERS
         if Players:GetPlayerFromCharacter(item) then continue end
 
-        if item:IsA("Model") or item:IsA("Part") or item:IsA("Folder") then
-            local targets = item:IsA("Folder") and item:GetChildren() or {item}
-            for _, t in ipairs(targets) do
-                -- Skip if 't' itself is a character (just in case characters are in a folder)
-                if Players:GetPlayerFromCharacter(t) then continue end
+        local targets = {}
+        if item:IsA("Model") or item:IsA("Part") or item:IsA("Tool") then
+            table.insert(targets, item)
+        elseif item:IsA("Folder") then
+            -- ONLY check inside folders that are explicitly meant for spawned items.
+            -- This completely ignores 'Workspace.Map' or 'Workspace.Decorations' where the fake statues are!
+            local fn = string.lower(item.Name)
+            if string.find(fn, "drop") or string.find(fn, "spawn") or string.find(fn, "brainrot") or string.find(fn, "item") then
+                for _, child in ipairs(item:GetChildren()) do
+                    table.insert(targets, child)
+                end
+            end
+        end
+
+        for _, t in ipairs(targets) do
+            -- Skip if 't' itself is a character
+            if Players:GetPlayerFromCharacter(t) then continue end
                 for base, val in pairs(allBrainrots) do
                     local matched = false
                     local mutation = nil
@@ -380,9 +391,13 @@ local function scanWorkspace()
                         -- CRITICAL: Do NOT use os.time() here!
                         local findingId = game.JobId .. "_" .. t.Name .. "_" .. tostring(mutation)
                         
+                        -- Set name to base so aj.lua shows the exact config string!
+                        local display_name = base
+                        if mutation then display_name = mutation .. " " .. base end
+
                         table.insert(findings, {
                             id = findingId,
-                            name = t.Name, base_name = base, value = finalVal, mutation = mutation,
+                            name = display_name, base_name = base, value = finalVal, mutation = mutation,
                             tier = (finalVal >= 100000000) and "Highlights" or "Midlights",
                             players = pCount .. "/" .. mPlayers, job_id = game.JobId, place_id = game.PlaceId, timestamp = os.time()
                         })
