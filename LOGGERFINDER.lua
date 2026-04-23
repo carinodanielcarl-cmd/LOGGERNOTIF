@@ -260,7 +260,7 @@ local function serverHop()
     
     local success, err = pcall(function()
         if queue_on_teleport then
-            queue_on_teleport([[loadstring(game:HttpGet("https://raw.githubusercontent.com/carinodanielcarl-cmd/LOGGERNOTIF/main/LOGGERFINDER.lua"))()]])
+            queue_on_teleport([[loadstring(game:HttpGet("https://raw.githubusercontent.com/carinodanielcarl-cmd/LOGGERNOTIF/main/LOGGERFINDER.lua?t=" .. tostring(tick())))()]])
         end
         
         -- Bypass HttpService limits by using the executor's native request to the official Roblox API
