@@ -329,7 +329,7 @@ local function postLogBatch(newFindings)
         for _, newFinding in ipairs(newFindings) do
             table.insert(currentData.findings, 1, newFinding)
         end
-        while #currentData.findings > 30 do table.remove(currentData.findings, 31) end
+        while #currentData.findings > 5 do table.remove(currentData.findings, 6) end
         
         local body = HttpService:JSONEncode(currentData)
         local options = {
