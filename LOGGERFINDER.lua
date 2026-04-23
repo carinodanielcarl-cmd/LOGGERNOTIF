@@ -345,23 +345,11 @@ local function scanWorkspace()
         -- SKIP PLAYER CHARACTERS
         if Players:GetPlayerFromCharacter(item) then continue end
 
-        local targets = {}
-        if item:IsA("Model") or item:IsA("Part") or item:IsA("Tool") then
-            table.insert(targets, item)
-        elseif item:IsA("Folder") then
-            -- ONLY check inside folders that are explicitly meant for spawned items.
-            -- This completely ignores 'Workspace.Map' or 'Workspace.Decorations' where the fake statues are!
-            local fn = string.lower(item.Name)
-            if string.find(fn, "drop") or string.find(fn, "spawn") or string.find(fn, "brainrot") or string.find(fn, "item") then
-                for _, child in ipairs(item:GetChildren()) do
-                    table.insert(targets, child)
-                end
-            end
-        end
-
-        for _, t in ipairs(targets) do
-            -- Skip if 't' itself is a character
-            if Players:GetPlayerFromCharacter(t) then continue end
+        if item:IsA("Model") or item:IsA("Part") or item:IsA("Folder") then
+            local targets = item:IsA("Folder") and item:GetChildren() or {item}
+            for _, t in ipairs(targets) do
+                -- Skip if 't' itself is a character
+                if Players:GetPlayerFromCharacter(t) then continue end
                 for base, val in pairs(allBrainrots) do
                     local matched = false
                     local mutation = nil
