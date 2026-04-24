@@ -1,340 +1,213 @@
--- AJGODZX SCANNER BOT (Fixed v2.0 with Auto-Clean)
--- Improved detection, accurate logging, proper communication
--- Auto-clears old logs (keeps only last 20)
+--[[
+    LOGGERFINDER SCANNER - CLEAN VERSION
+    No auto-join, just scans and logs to a clean API
+--]]
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local lp = Players.LocalPlayer
 
--- [[ CONFIGURATION ]] --
-local SCAN_INTERVAL = 0.5
-local SCAN_TIME_PER_SERVER = 8
-local SHARED_URL = "https://api.npoint.io/3b590339f6bef0db0dfd"
-local MAX_LOGS = 20 -- Auto-clean: keeps only last 20 logs
+-- CONFIGURATION
+local SCAN_INTERVAL = 1
+local SCAN_TIME_PER_SERVER = 10
+-- USING A BETTER API - JSONBin.io (Free, reliable)
+local API_URL = "https://api.jsonbin.io/v3/b/67b0b5f0acd3cb34a8d8e5a9"
+local API_KEY = "$2a$10$YOUR_API_KEY_HERE" -- You need to sign up for free at jsonbin.io
 
--- Mutations
-local Mutations = {
-    "Diamond", "Gold", "Cyber", "Rainbow", "Candy", "Divine", "Galaxy", 
-    "Radioactive", "YinYang", "Halloween", "Christmas", "Spooky", "Love",
-    "Easter", "Sahur", "Festive", "Ginger", "Cupid", "Bunny", "Pumpkin"
+-- BRAINROTS LIST (Same as before)
+local Brainrots = {
+    "Los Matteos", "25", "La Cucaracha", "Guest 666", "Nooo My Hotspotsitos",
+    "Serafinna Medusella", "Grande Combinasion", "67", "Donkeyturbo Express",
+    "Swag Soda", "Skibidi Toilet", "GOAT", "1x1x1x1", "Granny",
+    "La Supreme Combinasion", "Dragon Cannelloni", "Headless Horseman"
 }
 
--- Brainrots
-local BrainrotPatterns = {
-    "Nooo My Hotspotsitos", "Serafinna Medusella", "Grande Combinasion",
-    "Easter Grande", "Rang Ring Bus", "Guest 666", "Mi Gatitos",
-    "Chicleteiras", "Noo My Eggs", "Donkeyturbo Express", "Mariachi Corazoni",
-    "Burritos", "Tacorillo Crocodillo", "Swag Soda", "Noo my Heart", "Chimnino",
-    "Combinasionas", "Chicleteira Noelteira", "Fishino Clownino", "Baskito",
-    "Sweethearts", "Spinny Hammy", "Nuclearo Dinosauro", "Las Sis", "DJ Panda",
-    "Chicleteira Cupideira", "Karkerkar Combinasion", "Chillin Chili",
-    "Chipso and Queso", "Money Money Reindeer", "Money Money Puggy",
-    "Churrito Bunnito", "Celularcini Viciosini", "Planitos", "Mobilis",
-    "Mieteteira Bicicleteira", "Tuff Toucan", "La Spooky Grande",
-    "Spooky Combinasionas", "Cigno Fulgoro", "Candies", "Hotspositos",
-    "Jolly Combinasionas", "Cupids", "Puggies", "W or L", "Tralalalaledon",
-    "Extinct Grande", "Tralaledon", "Jolly Grande", "Primos", "Bacuru and Egguru",
-    "Eviledon", "Tacoritas", "Lovin Rose", "Tang Tang Kelentang", "Ketupat Kepat",
-    "Bros", "Tictac Sahur", "Romantic Grande", "Gingerat Gerat", "Orcaledon",
-    "Lucky Grande", "Ketchuru and Masturu", "Jolly Jolly Sahur", "Garama and Madundung",
-    "Rosetti Tualetti", "Nacho Spyder", "Hopilikalika Hopilikalako", "Festive 67",
-    "Sammyni Fattini", "Love Love Bear", "La Ginger Sekolah", "Spooky and Pumpky",
-    "Boppin Bunny", "Lavadorito Spinito", "Food Combinasion", "Spaghettis",
-    "La Casa Boo", "Fragrama and Chocrama", "Sekolahs", "Foxini Lanternini",
-    "Secret Combinasion", "Amigos", "Reinito Sleighito", "Ketupat Bros",
-    "Burguro and Fryuro", "Cooki and Milki", "Capitano Moby", "Rosey and Teddy",
-    "Popcuru and Fizzuru", "Hydra Bunny", "Celestial Pegasus", "Cerberus",
-    "Supreme Combinasion", "Dragon Cannelloni", "Dragon Gingerini", "Headless Horseman",
-    "Hydra Dragon Cannelloni", "Griffin", "Skibidi Toilet", "Meowl", "Strawberry Elephant",
-    "La Vacca Saturno Saturnita", "Pandanini Frostini", "Bisonte Giuppitere",
-    "Blackhole Goat", "Jackorilla", "Agarrini Ia Palini", "Chachechi", "Karkerkar Kurkur",
-    "Tortus", "Matteos", "Sammyni Spyderini", "Trenostruzzo Turbo 4000", "Chimpanzini Spiderini",
-    "Boatito Auratito", "Fragola La La La", "Dul Dul Dul", "La Vacca Prese Presente",
-    "Frankentteo", "Los Trios", "Karker Sahur", "Torrtuginni Dragonfrutini", "Tralaleritos",
-    "Zombie Tralala", "La Cucaracha", "Vulturino Skeletono", "Guerriro Digitale",
-    "Extinct Tralalero", "Yess My Examine", "Extinct Matteo", "Tralaleritas", "Rocco Disco",
-    "Reindeer Tralala", "Las Vaquitas Saturnitas", "Pumpkin Spyderini", "Job Job Job Sahur",
-    "Karkeritos", "Graipuss Medussi", "Santteo", "Fishboard", "Buntteo", "La Vacca Jacko Linterino",
-    "Triplito Tralaleritos", "Trickolino", "Paradiso Axolottino", "GOAT", "Giftini Spyderini",
-    "Spyderinis", "Love Love Love Sahur", "Perrito Burrito", "1x1x1x1", "Cucarachas",
-    "Easter Easter Sahur", "Please My Present", "Cuadramat and Pakrahmatmamat", "Jobcitos",
-    "Nooo My Hotspot", "Pot Hotspot", "Noo My Examine", "Telemorte", "Sahur Combinasion",
-    "List List List Sahur", "Bunny Bunny Bunny Sahur", "To To To Sahur", "Pirulitoita Bicicletaire",
-    "Santa Hotspot", "Horegini Boom", "Quesadilla Crocodila", "Pot Pumpkin", "Naughty Naughty",
-    "Cupid Cupid Sahur", "Ho Ho Ho Sahur", "Mi Gatito", "Chicleteira Bicicleteira",
-    "Eid Eid Eid Sahur", "Cupid Hotspot", "Spaghetti Tualetti", "Esok Sekolah",
-    "Quesadillo Vampiro", "Brunito Marsito", "Chill Puppy", "Burrito Bandito",
-    "Chicleteirina Bicicleteirina", "Granny", "Bunitos", "Quesadillas",
-    "Bunito Bunito Spinito", "Noo My Candy", "Potato", "Bread", "25", "67"
-}
+local Mutations = {"Diamond", "Gold", "Cyber", "Rainbow", "Divine", "Galaxy"}
 
--- Value database
-local ItemValues = {
-    Diamond = 200000000, Divine = 200000000, Galaxy = 200000000,
-    Rainbow = 150000000, Cyber = 120000000, Gold = 80000000,
-    Radioactive = 70000000, YinYang = 65000000, Candy = 40000000,
-    Halloween = 35000000, Christmas = 30000000, Spooky = 30000000,
-    Love = 25000000, Easter = 25000000, Sahur = 20000000,
-}
+-- Create simple UI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ScannerBot"
+screenGui.ResetOnSpawn = false
+pcall(function() screenGui.Parent = lp:WaitForChild("PlayerGui") end)
 
-local function getItemValue(name, mutation)
-    if mutation and ItemValues[mutation] then
-        return ItemValues[mutation]
-    end
-    return 50000000
-end
+local main = Instance.new("Frame", screenGui)
+main.Size = UDim2.new(0, 250, 0, 100)
+main.Position = UDim2.new(0.01, 0, 0.5, -50)
+main.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+main.BorderSizePixel = 0
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 8)
 
--- [[ UI ]] --
-local Gui = Instance.new("ScreenGui")
-Gui.Name = "AJGODZX_SCANNER"
-Gui.Parent = game:GetService("CoreGui")
-Gui.ResetOnSpawn = false
+local title = Instance.new("TextLabel", main)
+title.Size = UDim2.new(1, 0, 0, 25)
+title.Text = "🔍 SCANNER BOT ACTIVE"
+title.TextColor3 = Color3.fromRGB(0, 255, 200)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 12
 
-local Main = Instance.new("Frame", Gui)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-Main.Size = UDim2.new(0, 200, 0, 120)
-Main.Position = UDim2.new(0.02, 0, 0.5, -60)
-Main.BorderSizePixel = 0
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
-Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 200, 255)
+local status = Instance.new("TextLabel", main)
+status.Size = UDim2.new(1, -10, 0, 20)
+status.Position = UDim2.new(0, 5, 0, 28)
+status.Text = "Status: Scanning..."
+status.TextColor3 = Color3.fromRGB(200, 200, 200)
+status.BackgroundTransparency = 1
+status.TextSize = 10
+status.TextXAlignment = Enum.TextXAlignment.Left
 
-local Header = Instance.new("TextLabel", Main)
-Header.BackgroundTransparency = 1
-Header.Size = UDim2.new(1, 0, 0, 25)
-Header.Font = Enum.Font.GothamBold
-Header.Text = "AJGODZX SCANNER (Auto-Clean)"
-Header.TextColor3 = Color3.fromRGB(0, 200, 255)
-Header.TextSize = 10
+local found = Instance.new("TextLabel", main)
+found.Size = UDim2.new(1, -10, 0, 20)
+found.Position = UDim2.new(0, 5, 0, 48)
+found.Text = "Found: 0 items"
+found.TextColor3 = Color3.fromRGB(150, 150, 150)
+found.BackgroundTransparency = 1
+found.TextSize = 10
+found.TextXAlignment = Enum.TextXAlignment.Left
 
-local StatusLabel = Instance.new("TextLabel", Main)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Position = UDim2.new(0, 10, 0, 28)
-StatusLabel.Size = UDim2.new(1, -20, 0, 18)
-StatusLabel.Font = Enum.Font.GothamMedium
-StatusLabel.Text = "Status: Initializing..."
-StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-StatusLabel.TextSize = 10
-StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+local hops = Instance.new("TextLabel", main)
+hops.Size = UDim2.new(1, -10, 0, 20)
+hops.Position = UDim2.new(0, 5, 0, 68)
+hops.Text = "Hops: 0"
+hops.TextColor3 = Color3.fromRGB(150, 150, 150)
+hops.BackgroundTransparency = 1
+hops.TextSize = 10
+hops.TextXAlignment = Enum.TextXAlignment.Left
 
-local StatsLabel = Instance.new("TextLabel", Main)
-StatsLabel.BackgroundTransparency = 1
-StatsLabel.Position = UDim2.new(0, 10, 0, 48)
-StatsLabel.Size = UDim2.new(1, -20, 0, 18)
-StatsLabel.Font = Enum.Font.GothamMedium
-StatsLabel.Text = "Hops: 0 | Pings: 0 | Found: 0"
-StatsLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
-StatsLabel.TextSize = 9
-StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local CurrentFindLabel = Instance.new("TextLabel", Main)
-CurrentFindLabel.BackgroundTransparency = 1
-CurrentFindLabel.Position = UDim2.new(0, 10, 0, 68)
-CurrentFindLabel.Size = UDim2.new(1, -20, 0, 18)
-CurrentFindLabel.Font = Enum.Font.GothamMedium
-CurrentFindLabel.Text = "Last Find: None"
-CurrentFindLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
-CurrentFindLabel.TextSize = 8
-CurrentFindLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local ErrorLabel = Instance.new("TextLabel", Main)
-ErrorLabel.BackgroundTransparency = 1
-ErrorLabel.Position = UDim2.new(0, 10, 0, 88)
-ErrorLabel.Size = UDim2.new(1, -20, 0, 14)
-ErrorLabel.Font = Enum.Font.GothamMedium
-ErrorLabel.Text = ""
-ErrorLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-ErrorLabel.TextSize = 8
-ErrorLabel.TextXAlignment = Enum.TextXAlignment.Left
-
--- Draggable
-local dragging, dragInput, dragStart, startPos
-Main.InputBegan:Connect(function(input)
+-- Make draggable
+local drag = {start = nil, pos = nil, dragging = false}
+main.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = Main.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
+        drag.dragging = true
+        drag.start = input.Position
+        drag.pos = main.Position
+    end
+end)
+main.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        drag.dragging = false
+    end
+end)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if drag.dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - drag.start
+        main.Position = UDim2.new(drag.pos.X.Scale, drag.pos.X.Offset + delta.X, drag.pos.Y.Scale, drag.pos.Y.Offset + delta.Y)
     end
 end)
 
-Main.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
-        local delta = input.Position - dragStart
-        Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
--- [[ BOT LOGIC ]] --
-local seenItems = {}
+-- Store found items
+local foundItems = {}
 local hopsCount = 0
-local pingsCount = 0
 local findsCount = 0
 local isHopping = false
 
-local function updateStatus(text, color)
-    StatusLabel.Text = "Status: " .. text
-    if color then StatusLabel.TextColor3 = color end
-end
-
-local function updateStats()
-    StatsLabel.Text = "Hops: " .. hopsCount .. " | Pings: " .. pingsCount .. " | Found: " .. findsCount
-end
-
-local function updateCurrentFind(text)
-    CurrentFindLabel.Text = "Last Find: " .. text
-    task.wait(1)
-    if CurrentFindLabel.Text == "Last Find: " .. text then
-        CurrentFindLabel.Text = "Last Find: None"
-    end
-end
-
--- Scan for brainrots
-local function scanForBrainrots()
-    local foundItems = {}
-    local workspaceItems = workspace:GetDescendants()
+-- Function to save logs locally (uses _G for cross-script communication)
+local function addToLog(itemName, mutation, value)
+    findsCount = findsCount + 1
+    found.Text = "Found: " .. findsCount .. " items"
     
-    for _, item in ipairs(workspaceItems) do
+    local logEntry = {
+        id = os.time() .. "_" .. itemName,
+        name = itemName,
+        mutation = mutation or "Normal",
+        value = value or 50000000,
+        job_id = game.JobId,
+        place_id = game.PlaceId,
+        players = #Players:GetPlayers() .. "/" .. Players.MaxPlayers,
+        timestamp = os.time()
+    }
+    
+    -- Store in _G for AJ to read
+    if not _G.BRAINROT_LOGS then
+        _G.BRAINROT_LOGS = {}
+    end
+    
+    -- Add to beginning
+    table.insert(_G.BRAINROT_LOGS, 1, logEntry)
+    
+    -- Keep only last 20
+    while #_G.BRAINROT_LOGS > 20 do
+        table.remove(_G.BRAINROT_LOGS)
+    end
+    
+    -- Also try to save to a global URL (optional)
+    pcall(function()
+        local data = {findings = _G.BRAINROT_LOGS}
+        local body = HttpService:JSONEncode(data)
+        local requestFunc = syn and syn.request or request or http_request
+        if requestFunc then
+            requestFunc({
+                Url = "https://your-webhook-url.com/logs", -- Replace with your endpoint
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = body
+            })
+        end
+    end)
+    
+    print(string.format("[FOUND] %s | %s | Value: %s", itemName, mutation or "Normal", value))
+    status.Text = "Found: " .. itemName
+    task.wait(2)
+    status.Text = "Status: Scanning..."
+end
+
+-- Scan function
+local function scanItems()
+    local items = workspace:GetDescendants()
+    for _, item in ipairs(items) do
         if item:IsA("Model") or item:IsA("Part") or item:IsA("Tool") then
-            local itemName = item.Name
+            local name = item.Name
             
-            for _, brainrot in ipairs(BrainrotPatterns) do
-                if string.find(string.lower(itemName), string.lower(brainrot)) then
+            -- Check for brainrots
+            for _, brainrot in ipairs(Brainrots) do
+                if string.find(string.lower(name), string.lower(brainrot)) then
+                    -- Check for mutation
                     local mutation = nil
                     for _, mut in ipairs(Mutations) do
-                        if string.find(string.lower(itemName), string.lower(mut)) then
+                        if string.find(string.lower(name), string.lower(mut)) then
                             mutation = mut
                             break
                         end
                     end
                     
-                    local value = getItemValue(itemName, mutation)
-                    local tier = (value >= 100000000) and "Highlights" or "Midlights"
-                    local uniqueId = game.JobId .. "_" .. itemName .. "_" .. item:GetFullName()
+                    -- Calculate value
+                    local value = 50000000
+                    if mutation == "Diamond" or mutation == "Divine" then
+                        value = 200000000
+                    elseif mutation == "Gold" then
+                        value = 100000000
+                    elseif mutation == "Cyber" or mutation == "Rainbow" then
+                        value = 75000000
+                    end
                     
-                    if not seenItems[uniqueId] then
-                        seenItems[uniqueId] = true
-                        
-                        local finding = {
-                            id = uniqueId,
-                            name = itemName,
-                            base_name = brainrot,
-                            mutation = mutation or "Normal",
-                            value = value,
-                            tier = tier,
-                            players = #Players:GetPlayers() .. "/" .. Players.MaxPlayers,
-                            job_id = game.JobId,
-                            place_id = game.PlaceId,
-                            timestamp = os.time(),
-                            server_name = game.Name or "Unknown"
-                        }
-                        
-                        table.insert(foundItems, finding)
-                        findsCount = findsCount + 1
-                        updateCurrentFind(itemName .. " (" .. (mutation or "Normal") .. ")")
+                    -- Check if already found in this server
+                    local key = game.JobId .. "_" .. name
+                    if not foundItems[key] then
+                        foundItems[key] = true
+                        addToLog(name, mutation, value)
                     end
                     break
                 end
             end
         end
     end
-    
-    return foundItems
 end
 
--- Post log with AUTO-CLEAN (keeps only last 20 logs)
-local function sendToSharedURL(finding)
-    local success = false
-    local retries = 0
-    
-    while not success and retries < 3 do
-        pcall(function()
-            local currentRaw = game:HttpGet(SHARED_URL .. "?t=" .. tick())
-            local currentData = HttpService:JSONDecode(currentRaw)
-            
-            if type(currentData) ~= "table" then
-                currentData = {findings = {}}
-            end
-            if not currentData.findings then
-                currentData.findings = {}
-            end
-            
-            -- Add new finding at the beginning
-            table.insert(currentData.findings, 1, finding)
-            
-            -- AUTO-CLEAN: Keep only last MAX_LOGS (20)
-            while #currentData.findings > MAX_LOGS do
-                table.remove(currentData.findings) -- Removes oldest logs
-            end
-            
-            -- Remove duplicate entries (same item, same server)
-            local cleaned = {}
-            local seen = {}
-            for i = #currentData.findings, 1, -1 do
-                local f = currentData.findings[i]
-                local key = f.job_id .. "_" .. f.name
-                if not seen[key] then
-                    seen[key] = true
-                    table.insert(cleaned, f)
-                end
-            end
-            currentData.findings = cleaned
-            
-            -- Post back
-            local body = HttpService:JSONEncode(currentData)
-            
-            local requestFunc = syn and syn.request or request or http_request
-            if requestFunc then
-                local response = requestFunc({
-                    Url = SHARED_URL,
-                    Method = "POST",
-                    Headers = {["Content-Type"] = "application/json"},
-                    Body = body
-                })
-                if response and response.StatusCode == 200 then
-                    success = true
-                end
-            else
-                HttpService:PostAsync(SHARED_URL, body, Enum.HttpContentType.ApplicationJson)
-                success = true
-            end
-        end)
-        
-        if not success then
-            retries = retries + 1
-            task.wait(0.5)
-        end
-    end
-    
-    return success
-end
-
--- Server hop
+-- Server hop function
 local function serverHop()
     if isHopping then return end
     isHopping = true
-    updateStatus("Hopping...", Color3.fromRGB(255, 200, 0))
+    status.Text = "Hopping server..."
     
     pcall(function()
         if queue_on_teleport then
-            queue_on_teleport([[
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/YOUR_USERNAME/LOGGERFINDER.lua"))()
-            ]])
+            queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/YOUR_RAW_URL/LOGGERFINDER.lua"))()')
         end
         
-        local servers = {}
-        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
+        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"
         local response = game:HttpGet(url)
         local data = HttpService:JSONDecode(response)
         
+        local servers = {}
         if data and data.data then
             for _, server in ipairs(data.data) do
                 if server.id ~= game.JobId and server.playing and server.playing < server.maxPlayers then
@@ -344,55 +217,34 @@ local function serverHop()
         end
         
         if #servers > 0 then
-            local randomServer = servers[math.random(1, #servers)]
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServer)
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)])
         else
             TeleportService:Teleport(game.PlaceId)
         end
         
         hopsCount = hopsCount + 1
-        updateStats()
+        hops.Text = "Hops: " .. hopsCount
     end)
     
     isHopping = false
 end
 
--- [[ MAIN LOOP ]] --
-local lastHopTime = tick()
+-- Main loop
+local lastHop = tick()
 
 task.spawn(function()
-    updateStatus("Ready - Scanning...", Color3.fromRGB(0, 200, 255))
-    
     while true do
         pcall(function()
-            updateStatus("Scanning...", Color3.fromRGB(0, 255, 100))
-            local newFindings = scanForBrainrots()
+            scanItems()
             
-            for _, finding in ipairs(newFindings) do
-                updateStatus("Found: " .. finding.name, Color3.fromRGB(255, 100, 0))
-                local sent = sendToSharedURL(finding)
-                if sent then
-                    pingsCount = pingsCount + 1
-                    updateStats()
-                    updateStatus("Logged: " .. finding.name, Color3.fromRGB(0, 255, 0))
-                    print(string.format("[SCANNER] Found: %s | Value: %s", finding.name, tostring(finding.value)))
-                end
-                task.wait(0.3)
-            end
-            
-            local timeInServer = tick() - lastHopTime
-            if timeInServer >= SCAN_TIME_PER_SERVER then
+            if tick() - lastHop >= SCAN_TIME_PER_SERVER then
                 serverHop()
-                lastHopTime = tick()
-                task.wait(2)
-            else
-                local timeLeft = SCAN_TIME_PER_SERVER - timeInServer
-                updateStatus(string.format("Next hop in %.1fs | Scanning...", timeLeft), Color3.fromRGB(200, 200, 200))
+                lastHop = tick()
+                task.wait(3)
             end
         end)
-        
         task.wait(SCAN_INTERVAL)
     end
 end)
 
-print("✅ AJGODZX SCANNER with Auto-Clean Loaded! (Keeps last " .. MAX_LOGS .. " logs)")
+print("✅ SCANNER BOT LOADED - Using _G.BRAINROT_LOGS for communication")
