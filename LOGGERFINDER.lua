@@ -1,5 +1,6 @@
--- AJGODZX SCANNER BOT (Fixed v2.0)
+-- AJGODZX SCANNER BOT (Fixed v2.0 with Auto-Clean)
 -- Improved detection, accurate logging, proper communication
+-- Auto-clears old logs (keeps only last 20)
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -11,104 +12,84 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local lp = Players.LocalPlayer
 
 -- [[ CONFIGURATION ]] --
-local SCAN_INTERVAL = 0.5 -- Faster scanning
-local SCAN_TIME_PER_SERVER = 8 -- Time per server
+local SCAN_INTERVAL = 0.5
+local SCAN_TIME_PER_SERVER = 8
 local SHARED_URL = "https://api.npoint.io/3b590339f6bef0db0dfd"
+local MAX_LOGS = 20 -- Auto-clean: keeps only last 20 logs
 
--- Mutations (expanded for better detection)
+-- Mutations
 local Mutations = {
     "Diamond", "Gold", "Cyber", "Rainbow", "Candy", "Divine", "Galaxy", 
     "Radioactive", "YinYang", "Halloween", "Christmas", "Spooky", "Love",
     "Easter", "Sahur", "Festive", "Ginger", "Cupid", "Bunny", "Pumpkin"
 }
 
--- Base Brainrots (for pattern matching)
+-- Brainrots
 local BrainrotPatterns = {
     "Nooo My Hotspotsitos", "Serafinna Medusella", "Grande Combinasion",
     "Easter Grande", "Rang Ring Bus", "Guest 666", "Mi Gatitos",
-    "Chicleteiras", "Noo My Eggs", "Donkeyturbo Express",
-    "Mariachi Corazoni", "Burritos", "Tacorillo Crocodillo",
-    "Swag Soda", "Noo my Heart", "Chimnino", "Combinasionas",
-    "Chicleteira Noelteira", "Fishino Clownino", "Baskito",
-    "Sweethearts", "Spinny Hammy", "Nuclearo Dinosauro", "Las Sis",
-    "DJ Panda", "Chicleteira Cupideira", "Karkerkar Combinasion",
-    "Chillin Chili", "Chipso and Queso", "Money Money Reindeer",
-    "Money Money Puggy", "Churrito Bunnito", "Celularcini Viciosini",
-    "Planitos", "Mobilis", "Mieteteira Bicicleteira",
-    "Tuff Toucan", "La Spooky Grande", "Spooky Combinasionas",
-    "Cigno Fulgoro", "Candies", "Hotspositos", "Jolly Combinasionas",
-    "Cupids", "Puggies", "W or L", "Tralalalaledon", "Extinct Grande",
-    "Tralaledon", "Jolly Grande", "Primos", "Bacuru and Egguru",
-    "Eviledon", "Tacoritas", "Lovin Rose", "Tang Tang Kelentang",
-    "Ketupat Kepat", "Bros", "Tictac Sahur", "Romantic Grande",
-    "Gingerat Gerat", "Orcaledon", "Lucky Grande", "Ketchuru and Masturu",
-    "Jolly Jolly Sahur", "Garama and Madundung", "Rosetti Tualetti",
-    "Nacho Spyder", "Hopilikalika Hopilikalako", "Festive 67",
-    "Sammyni Fattini", "Love Love Bear", "La Ginger Sekolah",
-    "Spooky and Pumpky", "Boppin Bunny", "Lavadorito Spinito",
-    "Food Combinasion", "Spaghettis", "La Casa Boo", "Fragrama and Chocrama",
-    "Sekolahs", "Foxini Lanternini", "Secret Combinasion", "Amigos",
-    "Reinito Sleighito", "Ketupat Bros", "Burguro and Fryuro",
-    "Cooki and Milki", "Capitano Moby", "Rosey and Teddy", "Popcuru and Fizzuru",
-    "Hydra Bunny", "Celestial Pegasus", "Cerberus", "Supreme Combinasion",
-    "Dragon Cannelloni", "Dragon Gingerini", "Headless Horseman",
-    "Hydra Dragon Cannelloni", "Griffin", "Skibidi Toilet", "Meowl",
-    "Strawberry Elephant", "La Vacca Saturno Saturnita", "Pandanini Frostini",
-    "Bisonte Giuppitere", "Blackhole Goat", "Jackorilla", "Agarrini Ia Palini",
-    "Chachechi", "Karkerkar Kurkur", "Tortus", "Matteos", "Sammyni Spyderini",
-    "Trenostruzzo Turbo 4000", "Chimpanzini Spiderini", "Boatito Auratito",
-    "Fragola La La La", "Dul Dul Dul", "La Vacca Prese Presente", "Frankentteo",
-    "Los Trios", "Karker Sahur", "Torrtuginni Dragonfrutini", "Tralaleritos",
+    "Chicleteiras", "Noo My Eggs", "Donkeyturbo Express", "Mariachi Corazoni",
+    "Burritos", "Tacorillo Crocodillo", "Swag Soda", "Noo my Heart", "Chimnino",
+    "Combinasionas", "Chicleteira Noelteira", "Fishino Clownino", "Baskito",
+    "Sweethearts", "Spinny Hammy", "Nuclearo Dinosauro", "Las Sis", "DJ Panda",
+    "Chicleteira Cupideira", "Karkerkar Combinasion", "Chillin Chili",
+    "Chipso and Queso", "Money Money Reindeer", "Money Money Puggy",
+    "Churrito Bunnito", "Celularcini Viciosini", "Planitos", "Mobilis",
+    "Mieteteira Bicicleteira", "Tuff Toucan", "La Spooky Grande",
+    "Spooky Combinasionas", "Cigno Fulgoro", "Candies", "Hotspositos",
+    "Jolly Combinasionas", "Cupids", "Puggies", "W or L", "Tralalalaledon",
+    "Extinct Grande", "Tralaledon", "Jolly Grande", "Primos", "Bacuru and Egguru",
+    "Eviledon", "Tacoritas", "Lovin Rose", "Tang Tang Kelentang", "Ketupat Kepat",
+    "Bros", "Tictac Sahur", "Romantic Grande", "Gingerat Gerat", "Orcaledon",
+    "Lucky Grande", "Ketchuru and Masturu", "Jolly Jolly Sahur", "Garama and Madundung",
+    "Rosetti Tualetti", "Nacho Spyder", "Hopilikalika Hopilikalako", "Festive 67",
+    "Sammyni Fattini", "Love Love Bear", "La Ginger Sekolah", "Spooky and Pumpky",
+    "Boppin Bunny", "Lavadorito Spinito", "Food Combinasion", "Spaghettis",
+    "La Casa Boo", "Fragrama and Chocrama", "Sekolahs", "Foxini Lanternini",
+    "Secret Combinasion", "Amigos", "Reinito Sleighito", "Ketupat Bros",
+    "Burguro and Fryuro", "Cooki and Milki", "Capitano Moby", "Rosey and Teddy",
+    "Popcuru and Fizzuru", "Hydra Bunny", "Celestial Pegasus", "Cerberus",
+    "Supreme Combinasion", "Dragon Cannelloni", "Dragon Gingerini", "Headless Horseman",
+    "Hydra Dragon Cannelloni", "Griffin", "Skibidi Toilet", "Meowl", "Strawberry Elephant",
+    "La Vacca Saturno Saturnita", "Pandanini Frostini", "Bisonte Giuppitere",
+    "Blackhole Goat", "Jackorilla", "Agarrini Ia Palini", "Chachechi", "Karkerkar Kurkur",
+    "Tortus", "Matteos", "Sammyni Spyderini", "Trenostruzzo Turbo 4000", "Chimpanzini Spiderini",
+    "Boatito Auratito", "Fragola La La La", "Dul Dul Dul", "La Vacca Prese Presente",
+    "Frankentteo", "Los Trios", "Karker Sahur", "Torrtuginni Dragonfrutini", "Tralaleritos",
     "Zombie Tralala", "La Cucaracha", "Vulturino Skeletono", "Guerriro Digitale",
-    "Extinct Tralalero", "Yess My Examine", "Extinct Matteo", "Tralaleritas",
-    "Rocco Disco", "Reindeer Tralala", "Las Vaquitas Saturnitas", "Pumpkin Spyderini",
-    "Job Job Job Sahur", "Karkeritos", "Graipuss Medussi", "Santteo", "Fishboard",
-    "Buntteo", "La Vacca Jacko Linterino", "Triplito Tralaleritos", "Trickolino",
-    "Paradiso Axolottino", "GOAT", "Giftini Spyderini", "Spyderinis", "Love Love Love Sahur",
-    "Perrito Burrito", "1x1x1x1", "Cucarachas", "Easter Easter Sahur", "Please My Present",
-    "Cuadramat and Pakrahmatmamat", "Jobcitos", "Nooo My Hotspot", "Pot Hotspot",
-    "Noo My Examine", "Telemorte", "Sahur Combinasion", "List List List Sahur",
-    "Bunny Bunny Bunny Sahur", "To To To Sahur", "Pirulitoita Bicicletaire",
-    "Santa Hotspot", "Horegini Boom", "Quesadilla Crocodila", "Pot Pumpkin",
-    "Naughty Naughty", "Cupid Cupid Sahur", "Ho Ho Ho Sahur", "Mi Gatito",
-    "Chicleteira Bicicleteira", "Eid Eid Eid Sahur", "Cupid Hotspot", "Spaghetti Tualetti",
-    "Esok Sekolah", "Quesadillo Vampiro", "Brunito Marsito", "Chill Puppy",
-    "Burrito Bandito", "Chicleteirina Bicicleteirina", "Granny", "Bunitos",
-    "Quesadillas", "Bunito Bunito Spinito", "Noo My Candy", "Potato", "Bread"
+    "Extinct Tralalero", "Yess My Examine", "Extinct Matteo", "Tralaleritas", "Rocco Disco",
+    "Reindeer Tralala", "Las Vaquitas Saturnitas", "Pumpkin Spyderini", "Job Job Job Sahur",
+    "Karkeritos", "Graipuss Medussi", "Santteo", "Fishboard", "Buntteo", "La Vacca Jacko Linterino",
+    "Triplito Tralaleritos", "Trickolino", "Paradiso Axolottino", "GOAT", "Giftini Spyderini",
+    "Spyderinis", "Love Love Love Sahur", "Perrito Burrito", "1x1x1x1", "Cucarachas",
+    "Easter Easter Sahur", "Please My Present", "Cuadramat and Pakrahmatmamat", "Jobcitos",
+    "Nooo My Hotspot", "Pot Hotspot", "Noo My Examine", "Telemorte", "Sahur Combinasion",
+    "List List List Sahur", "Bunny Bunny Bunny Sahur", "To To To Sahur", "Pirulitoita Bicicletaire",
+    "Santa Hotspot", "Horegini Boom", "Quesadilla Crocodila", "Pot Pumpkin", "Naughty Naughty",
+    "Cupid Cupid Sahur", "Ho Ho Ho Sahur", "Mi Gatito", "Chicleteira Bicicleteira",
+    "Eid Eid Eid Sahur", "Cupid Hotspot", "Spaghetti Tualetti", "Esok Sekolah",
+    "Quesadillo Vampiro", "Brunito Marsito", "Chill Puppy", "Burrito Bandito",
+    "Chicleteirina Bicicleteirina", "Granny", "Bunitos", "Quesadillas",
+    "Bunito Bunito Spinito", "Noo My Candy", "Potato", "Bread", "25", "67"
 }
 
--- [[ VALUE DATABASE ]] --
+-- Value database
 local ItemValues = {
-    -- High tier (100M+)
-    Diamond = 200000000,
-    Divine = 200000000,
-    Galaxy = 200000000,
-    Rainbow = 150000000,
-    Cyber = 120000000,
-    
-    -- Mid tier (50-100M)
-    Gold = 80000000,
-    Radioactive = 70000000,
-    YinYang = 65000000,
-    
-    -- Normal tier (20-50M)
-    Candy = 40000000,
-    Halloween = 35000000,
-    Christmas = 30000000,
-    Spooky = 30000000,
-    Love = 25000000,
-    Easter = 25000000,
-    Sahur = 20000000,
+    Diamond = 200000000, Divine = 200000000, Galaxy = 200000000,
+    Rainbow = 150000000, Cyber = 120000000, Gold = 80000000,
+    Radioactive = 70000000, YinYang = 65000000, Candy = 40000000,
+    Halloween = 35000000, Christmas = 30000000, Spooky = 30000000,
+    Love = 25000000, Easter = 25000000, Sahur = 20000000,
 }
 
 local function getItemValue(name, mutation)
     if mutation and ItemValues[mutation] then
         return ItemValues[mutation]
     end
-    return 50000000 -- Default value
+    return 50000000
 end
 
--- [[ UI CREATION ]] --
+-- [[ UI ]] --
 local Gui = Instance.new("ScreenGui")
 Gui.Name = "AJGODZX_SCANNER"
 Gui.Parent = game:GetService("CoreGui")
@@ -126,9 +107,9 @@ local Header = Instance.new("TextLabel", Main)
 Header.BackgroundTransparency = 1
 Header.Size = UDim2.new(1, 0, 0, 25)
 Header.Font = Enum.Font.GothamBold
-Header.Text = "AJGODZX SCANNER v2.0"
+Header.Text = "AJGODZX SCANNER (Auto-Clean)"
 Header.TextColor3 = Color3.fromRGB(0, 200, 255)
-Header.TextSize = 11
+Header.TextSize = 10
 
 local StatusLabel = Instance.new("TextLabel", Main)
 StatusLabel.BackgroundTransparency = 1
@@ -198,7 +179,6 @@ local hopsCount = 0
 local pingsCount = 0
 local findsCount = 0
 local isHopping = false
-local currentFind = nil
 
 local function updateStatus(text, color)
     StatusLabel.Text = "Status: " .. text
@@ -209,14 +189,7 @@ local function updateStats()
     StatsLabel.Text = "Hops: " .. hopsCount .. " | Pings: " .. pingsCount .. " | Found: " .. findsCount
 end
 
-local function logError(text)
-    ErrorLabel.Text = tostring(text)
-    task.wait(3)
-    ErrorLabel.Text = ""
-end
-
 local function updateCurrentFind(text)
-    currentFind = text
     CurrentFindLabel.Text = "Last Find: " .. text
     task.wait(1)
     if CurrentFindLabel.Text == "Last Find: " .. text then
@@ -224,7 +197,7 @@ local function updateCurrentFind(text)
     end
 end
 
--- Improved item scanning
+-- Scan for brainrots
 local function scanForBrainrots()
     local foundItems = {}
     local workspaceItems = workspace:GetDescendants()
@@ -233,11 +206,8 @@ local function scanForBrainrots()
         if item:IsA("Model") or item:IsA("Part") or item:IsA("Tool") then
             local itemName = item.Name
             
-            -- Check for exact matches or pattern matches
             for _, brainrot in ipairs(BrainrotPatterns) do
-                -- Case-insensitive matching
                 if string.find(string.lower(itemName), string.lower(brainrot)) then
-                    -- Determine mutation
                     local mutation = nil
                     for _, mut in ipairs(Mutations) do
                         if string.find(string.lower(itemName), string.lower(mut)) then
@@ -246,11 +216,8 @@ local function scanForBrainrots()
                         end
                     end
                     
-                    -- Calculate value
                     local value = getItemValue(itemName, mutation)
                     local tier = (value >= 100000000) and "Highlights" or "Midlights"
-                    
-                    -- Create unique ID
                     local uniqueId = game.JobId .. "_" .. itemName .. "_" .. item:GetFullName()
                     
                     if not seenItems[uniqueId] then
@@ -274,7 +241,7 @@ local function scanForBrainrots()
                         findsCount = findsCount + 1
                         updateCurrentFind(itemName .. " (" .. (mutation or "Normal") .. ")")
                     end
-                    break -- Found match, move to next item
+                    break
                 end
             end
         end
@@ -283,14 +250,13 @@ local function scanForBrainrots()
     return foundItems
 end
 
--- Improved webhook/post function
+-- Post log with AUTO-CLEAN (keeps only last 20 logs)
 local function sendToSharedURL(finding)
     local success = false
     local retries = 0
     
     while not success and retries < 3 do
         pcall(function()
-            -- Get current data
             local currentRaw = game:HttpGet(SHARED_URL .. "?t=" .. tick())
             local currentData = HttpService:JSONDecode(currentRaw)
             
@@ -304,10 +270,23 @@ local function sendToSharedURL(finding)
             -- Add new finding at the beginning
             table.insert(currentData.findings, 1, finding)
             
-            -- Keep only last 50 findings
-            while #currentData.findings > 50 do
-                table.remove(currentData.findings)
+            -- AUTO-CLEAN: Keep only last MAX_LOGS (20)
+            while #currentData.findings > MAX_LOGS do
+                table.remove(currentData.findings) -- Removes oldest logs
             end
+            
+            -- Remove duplicate entries (same item, same server)
+            local cleaned = {}
+            local seen = {}
+            for i = #currentData.findings, 1, -1 do
+                local f = currentData.findings[i]
+                local key = f.job_id .. "_" .. f.name
+                if not seen[key] then
+                    seen[key] = true
+                    table.insert(cleaned, f)
+                end
+            end
+            currentData.findings = cleaned
             
             -- Post back
             local body = HttpService:JSONEncode(currentData)
@@ -317,16 +296,13 @@ local function sendToSharedURL(finding)
                 local response = requestFunc({
                     Url = SHARED_URL,
                     Method = "POST",
-                    Headers = {
-                        ["Content-Type"] = "application/json"
-                    },
+                    Headers = {["Content-Type"] = "application/json"},
                     Body = body
                 })
                 if response and response.StatusCode == 200 then
                     success = true
                 end
             else
-                -- Fallback
                 HttpService:PostAsync(SHARED_URL, body, Enum.HttpContentType.ApplicationJson)
                 success = true
             end
@@ -341,25 +317,19 @@ local function sendToSharedURL(finding)
     return success
 end
 
--- Improved server hopping
+-- Server hop
 local function serverHop()
-    if isHopping then 
-        updateStatus("Already hopping...", Color3.fromRGB(255, 200, 0))
-        return 
-    end
-    
+    if isHopping then return end
     isHopping = true
-    updateStatus("Hopping to new server...", Color3.fromRGB(255, 200, 0))
+    updateStatus("Hopping...", Color3.fromRGB(255, 200, 0))
     
     pcall(function()
-        -- Queue script for next server
         if queue_on_teleport then
             queue_on_teleport([[
                 loadstring(game:HttpGet("https://raw.githubusercontent.com/YOUR_USERNAME/LOGGERFINDER.lua"))()
             ]])
         end
         
-        -- Find a new server
         local servers = {}
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
         local response = game:HttpGet(url)
@@ -389,47 +359,32 @@ end
 
 -- [[ MAIN LOOP ]] --
 local lastHopTime = tick()
-local lastScanFindings = {}
 
 task.spawn(function()
     updateStatus("Ready - Scanning...", Color3.fromRGB(0, 200, 255))
     
     while true do
         pcall(function()
-            -- Scan for items
-            updateStatus("Scanning for brainrots...", Color3.fromRGB(0, 255, 100))
+            updateStatus("Scanning...", Color3.fromRGB(0, 255, 100))
             local newFindings = scanForBrainrots()
             
-            -- Process findings
             for _, finding in ipairs(newFindings) do
                 updateStatus("Found: " .. finding.name, Color3.fromRGB(255, 100, 0))
-                
-                -- Send to shared URL
                 local sent = sendToSharedURL(finding)
                 if sent then
                     pingsCount = pingsCount + 1
                     updateStats()
                     updateStatus("Logged: " .. finding.name, Color3.fromRGB(0, 255, 0))
-                    
-                    -- Log to console
-                    print(string.format("[SCANNER] Found: %s | Value: %s | Mutation: %s",
-                        finding.name,
-                        tostring(finding.value),
-                        finding.mutation or "Normal"
-                    ))
-                else
-                    logError("Failed to send: " .. finding.name)
+                    print(string.format("[SCANNER] Found: %s | Value: %s", finding.name, tostring(finding.value)))
                 end
-                
-                task.wait(0.3) -- Small delay between logs
+                task.wait(0.3)
             end
             
-            -- Check if it's time to hop
             local timeInServer = tick() - lastHopTime
             if timeInServer >= SCAN_TIME_PER_SERVER then
                 serverHop()
                 lastHopTime = tick()
-                task.wait(2) -- Wait after hop
+                task.wait(2)
             else
                 local timeLeft = SCAN_TIME_PER_SERVER - timeInServer
                 updateStatus(string.format("Next hop in %.1fs | Scanning...", timeLeft), Color3.fromRGB(200, 200, 200))
@@ -440,4 +395,4 @@ task.spawn(function()
     end
 end)
 
-print("✅ AJGODZX SCANNER v2.0 LOADED!")
+print("✅ AJGODZX SCANNER with Auto-Clean Loaded! (Keeps last " .. MAX_LOGS .. " logs)")
