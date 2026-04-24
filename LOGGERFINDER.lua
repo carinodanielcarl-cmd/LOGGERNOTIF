@@ -1,29 +1,57 @@
--- LOGGERFINDER SCANNER - WORKING VERSION
+-- LOGGERFINDER SCANNER - FULL BRAINROTS LIST
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
+local SoundService = game:GetService("SoundService")
 local lp = Players.LocalPlayer
 
--- WEBHOOK FOR COMMUNICATION (FREE SERVICE)
-local WEBHOOK_URL = "https://webhook.site/be6f6e6e-6e6e-6e6e-6e6e-6e6e6e6e6e6e"
+-- YOUR PASTEBIN INFO
+local PASTEBIN_API_KEY = "ZtGs1tRiCfQXw-728nn2Vy8sSCoRLBTw"
+local PASTE_ID = "YOUR_PASTE_ID_HERE"
 
--- BRAINROTS
-local Brainrots = {
-    "Los Matteos", "25", "La Cucaracha", "Guest 666", "Nooo My Hotspotsitos",
-    "Serafinna Medusella", "Grande Combinasion", "67", "Donkeyturbo Express",
-    "Swag Soda", "Skibidi Toilet", "GOAT", "1x1x1x1", "Granny",
-    "La Supreme Combinasion", "Dragon Cannelloni", "Headless Horseman", "Bread",
-    "Potato", "Candy", "Love Bear", "Spooky", "Pumpkin", "Cyber", "Rainbow",
-    "Diamond", "Gold", "Divine", "Galaxy"
+-- COMPLETE BRAINROTS LIST
+local allBrainrots = {
+    "Los Nooo My Hotspotsitos", "Serafinna Medusella", "La Grande Combinassion", "La Easter Grande", "Rang Ring Bus", "Guest 666",
+    "Los Mi Gatitos", "Los Chicleteiras", "Noo My Eggs", "67", "Donkeyturbo Express", "Mariachi Corazoni", "Los Burritos",
+    "Los 25", "Tacorillo Crocodillo", "Swag Soda", "Noo my Heart", "Chimnino", "Los Combinasionas", "Chicleteira Noelteira",
+    "Fishino Clownino", "Baskito", "Tacorita Bicicleta", "Los Sweethearts", "Spinny Hammy", "Nuclearo Dinosauro", "Las Sis",
+    "DJ Panda", "Chicleteira Cupideira", "La Karkerkar Combinasion", "Chillin Chili", "Chipso and Queso", "Money Money Reindeer",
+    "Money Money Puggy", "Churrito Bunnito", "Celularcini Viciosini", "Los Planitos", "Los Mobilis", "Los 67",
+    "Mieteteira Bicicleteira", "Tuff Toucan", "La Spooky Grande", "Los Spooky Combinasionas", "Cigno Fulgoro", "Los Candies",
+    "Los Hotspositos", "Los Jolly Combinasionas", "Los Cupids", "Los Puggies", "W or L", "Tralalalaledon",
+    "La Extinct Grande Combinasion", "Tralaledon", "La Jolly Grande", "Los Primos", "Bacuru and Egguru", "Eviledon",
+    "Los Tacoritas", "Lovin Rose", "Tang Tang Kelentang", "Ketupat Kepat", "Los Bros", "Tictac Sahur", "La Romantic Grande",
+    "Gingerat Gerat", "Orcaledon", "La Lucky Grande", "Ketchuru and Masturu", "Jolly Jolly Sahur", "Garama and Madundung",
+    "Rosetti Tualetti", "Nacho Spyder", "Hopilikalika Hopilikalako", "Festive 67", "Sammyni Fattini", "Love Love Bear",
+    "La Ginger Sekolah", "Spooky and Pumpky", "Boppin Bunny", "Lavadorito Spinito", "La Food Combinasion", "Los Spaghettis",
+    "La Casa Boo", "Fragrama and Chocrama", "Los Sekolahs", "Foxini Lanternini", "La Secret Combinasion", "Los Amigos",
+    "Reinito Sleighito", "Ketupat Bros", "Burguro and Fryuro", "Cooki and Milki", "Capitano Moby", "Rosey and Teddy",
+    "Popcuru and Fizzuru", "Hydra Bunny", "Celestial Pegasus", "Cerberus", "La Supreme Combinasion", "Dragon Cannelloni",
+    "Dragon Gingerini", "Headless Horseman", "Hydra Dragon Cannelloni", "Griffin", "Skibidi Toilet", "Meowl",
+    "Strawberry Elephant", "La Vacca Saturno Saturnita", "Pandanini Frostini", "Bisonte Giuppitere", "Blackhole Goat",
+    "Jackorilla", "Agarrini Ia Palini", "Chachechi", "Karkerkar Kurkur", "Los Tortus", "Los Matteos", "Sammyni Spyderini",
+    "Trenostruzzo Turbo 4000", "Chimpanzini Spiderini", "Boatito Auratito", "Fragola La La La", "Dul Dul Dul",
+    "La Vacca Prese Presente", "Frankentteo", "Los Trios", "Karker Sahur", "Torrtuginni Dragonfrutini (Lucky Block)",
+    "Los Tralaleritos", "Zombie Tralala", "La Cucaracha", "Vulturino Skeletono", "Guerriro Digitale", "Extinct Tralalero",
+    "Yess My Examine", "Extinct Matteo", "Las Tralaleritas", "Rocco Disco", "Reindeer Tralala", "Las Vaquitas Saturnitas",
+    "Pumpkin Spyderini", "Job Job Job Sahur", "Los Karkeritos", "Graipuss Medussi", "Santteo", "Fishboard", "Buntteo",
+    "La Vacca Jacko Linterino", "Triplito Tralaleritos", "Trickolino", "Paradiso Axolottino", "GOAT", "Giftini Spyderini",
+    "Los Spyderinis", "Love Love Love Sahur", "Perrito Burrito", "1x1x1x1", "Los Cucarachas", "Easter Easter Sahur",
+    "Please My Present", "Cuadramat and Pakrahmatmamat", "Los Jobcitos", "Nooo My Hotspot", "Pot Hotspot (Lucky Block)",
+    "Noo My Examine", "Telemorte", "La Sahur Combinasion", "List List List Sahur", "Bunny Bunny Bunny Sahur", "To To To Sahur",
+    "Pirulitoita Bicicletaire", "25", "Santa Hotspot", "Horegini Boom", "Quesadilla Crocodila", "Pot Pumpkin", "Naughty Naughty",
+    "Cupid Cupid Sahur", "Ho Ho Ho Sahur", "Mi Gatito", "Chicleteira Bicicleteira", "Eid Eid Eid Sahur", "Cupid Hotspot",
+    "Spaghetti Tualetti (Lucky Block)", "Esok Sekolah (Lucky Block)", "Quesadillo Vampiro", "Brunito Marsito", "Chill Puppy",
+    "Burrito Bandito", "Chicleteirina Bicicleteirina", "Granny", "Los Bunitos", "Los Quesadillas", "Bunito Bunito Spinito",
+    "Noo My Candy"
 }
 
 local Mutations = {"Diamond", "Gold", "Cyber", "Rainbow", "Divine", "Galaxy", "Spooky", "Love"}
 
 -- UI
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ScannerBot"
+screenGui.Name = "Scanner"
 pcall(function() screenGui.Parent = game:GetService("CoreGui") end)
-pcall(function() if not screenGui.Parent then screenGui.Parent = lp:WaitForChild("PlayerGui") end end)
 
 local main = Instance.new("Frame", screenGui)
 main.Size = UDim2.new(0, 280, 0, 120)
@@ -34,38 +62,38 @@ Instance.new("UICorner", main).CornerRadius = UDim.new(0, 8)
 
 local title = Instance.new("TextLabel", main)
 title.Size = UDim2.new(1, 0, 0, 30)
-title.Text = "🔍 SCANNER BOT ACTIVE"
+title.Text = "🔍 SCANNER ACTIVE"
 title.TextColor3 = Color3.fromRGB(0, 255, 200)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBold
 title.TextSize = 13
 
-local statusLabel = Instance.new("TextLabel", main)
-statusLabel.Size = UDim2.new(1, -20, 0, 20)
-statusLabel.Position = UDim2.new(0, 10, 0, 35)
-statusLabel.Text = "Status: Scanning..."
-statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-statusLabel.BackgroundTransparency = 1
-statusLabel.TextSize = 11
-statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+local status = Instance.new("TextLabel", main)
+status.Size = UDim2.new(1, -20, 0, 20)
+status.Position = UDim2.new(0, 10, 0, 35)
+status.Text = "Status: Ready"
+status.TextColor3 = Color3.fromRGB(200, 200, 200)
+status.BackgroundTransparency = 1
+status.TextSize = 11
+status.TextXAlignment = Enum.TextXAlignment.Left
 
 local foundLabel = Instance.new("TextLabel", main)
 foundLabel.Size = UDim2.new(1, -20, 0, 20)
 foundLabel.Position = UDim2.new(0, 10, 0, 55)
-foundLabel.Text = "Found: 0 items"
+foundLabel.Text = "Found: 0"
 foundLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
 foundLabel.BackgroundTransparency = 1
 foundLabel.TextSize = 11
 foundLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-local hopsLabel = Instance.new("TextLabel", main)
-hopsLabel.Size = UDim2.new(1, -20, 0, 20)
-hopsLabel.Position = UDim2.new(0, 10, 0, 75)
-hopsLabel.Text = "Hops: 0"
-hopsLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
-hopsLabel.BackgroundTransparency = 1
-hopsLabel.TextSize = 11
-hopsLabel.TextXAlignment = Enum.TextXAlignment.Left
+local hopLabel = Instance.new("TextLabel", main)
+hopLabel.Size = UDim2.new(1, -20, 0, 20)
+hopLabel.Position = UDim2.new(0, 10, 0, 75)
+hopLabel.Text = "Hops: 0"
+hopLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
+hopLabel.BackgroundTransparency = 1
+hopLabel.TextSize = 11
+hopLabel.TextXAlignment = Enum.TextXAlignment.Left
 
 -- Make draggable
 local dragging, dragStart, startPos
@@ -88,107 +116,121 @@ game:GetService("UserInputService").InputChanged:Connect(function(input)
     end
 end)
 
+-- Sound
+local notifSound = Instance.new("Sound")
+notifSound.SoundId = "rbxassetid://4590662766"
+notifSound.Volume = 0.5
+notifSound.Parent = SoundService
+
+local function playSound()
+    pcall(function() notifSound:Play() end)
+end
+
+-- Format number
+local function formatNumber(n)
+    n = tonumber(n) or 0
+    if n >= 1000000 then
+        local formatted = string.format("%.1fM", n / 1000000)
+        return formatted:gsub("%.0M", "M")
+    elseif n >= 1000 then
+        local formatted = string.format("%.1fK", n / 1000)
+        return formatted:gsub("%.0K", "K")
+    else
+        return tostring(n)
+    end
+end
+
 -- Data
 local scannedItems = {}
 local hopsCount = 0
 local findsCount = 0
 local isHopping = false
-local currentLogs = {}
 
--- Send log to webhook
-local function sendToWebhook(logEntry)
-    local success, err = pcall(function()
-        local data = {
-            findings = currentLogs,
-            lastUpdate = os.time(),
-            type = "BRAINROT_LOG"
-        }
-        local jsonData = HttpService:JSONEncode(data)
-        
-        local requestFunc = syn and syn.request or request or http_request or (HttpService and HttpService.RequestAsync)
-        
-        if requestFunc then
-            local response = requestFunc({
-                Url = WEBHOOK_URL,
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = jsonData
-            })
-        end
-    end)
+-- Get current logs
+local function getCurrentLogs()
+    local requestFunc = syn and syn.request or request or http_request
+    if not requestFunc then return {} end
     
-    if not success then
-        warn("Webhook failed: " .. tostring(err))
+    local response = requestFunc({
+        Url = "https://pastebin.com/raw/" .. PASTE_ID,
+        Method = "GET"
+    })
+    
+    if response and response.Body and response.Body ~= "" then
+        local success, data = pcall(function() return HttpService:JSONDecode(response.Body) end)
+        if success and data and data.findings then return data.findings end
     end
+    return {}
+end
+
+-- Save to Pastebin
+local function saveToPastebin(logs)
+    local jsonData = HttpService:JSONEncode({findings = logs, lastUpdate = os.time()})
+    local requestFunc = syn and syn.request or request or http_request
+    if not requestFunc then return false end
+    
+    local response = requestFunc({
+        Url = "https://pastebin.com/api/api_post.php",
+        Method = "POST",
+        Body = "api_dev_key=" .. PASTEBIN_API_KEY .. "&api_option=update&api_paste_key=" .. PASTE_ID .. "&api_paste_code=" .. HttpService:URLEncode(jsonData) .. "&api_paste_private=1"
+    })
+    return response and (response.StatusCode == 200 or (response.Body and string.find(response.Body, "paste")))
 end
 
 -- Add log
-local function addLog(itemName, mutation, value, jobId, placeId, playerCount)
+local function addLog(itemName, mutation, value)
     findsCount = findsCount + 1
-    foundLabel.Text = "Found: " .. findsCount .. " items"
+    foundLabel.Text = "Found: " .. findsCount
+    status.Text = "Found: " .. itemName
+    playSound()
     
-    local logEntry = {
-        id = os.time() .. "_" .. game.JobId .. "_" .. itemName,
+    local logs = getCurrentLogs()
+    local newLog = {
+        id = os.time() .. "_" .. game.JobId,
         name = itemName,
         mutation = mutation or "Normal",
         value = value or 50000000,
-        job_id = jobId or game.JobId,
-        place_id = placeId or game.PlaceId,
-        players = playerCount or (#Players:GetPlayers() .. "/" .. Players.MaxPlayers),
+        formattedValue = formatNumber(value or 50000000),
+        job_id = game.JobId,
+        place_id = game.PlaceId,
+        players = #Players:GetPlayers() .. "/" .. Players.MaxPlayers,
         timestamp = os.time()
     }
     
-    -- Add to beginning
-    table.insert(currentLogs, 1, logEntry)
+    table.insert(logs, 1, newLog)
+    while #logs > 20 do table.remove(logs) end
+    saveToPastebin(logs)
     
-    -- Keep only last 20
-    while #currentLogs > 20 do
-        table.remove(currentLogs)
-    end
-    
-    -- Save to _G for same-executor communication
-    _G.BRAINROT_LOGS = currentLogs
-    
-    -- Send to webhook
-    sendToWebhook(logEntry)
-    
-    -- Print
-    print(string.format("[FOUND] %s | %s | Value: %s", itemName, mutation or "Normal", value))
-    statusLabel.Text = "Found: " .. itemName
+    print(string.format("[FOUND] %s | %s | Value: %s", itemName, mutation or "Normal", formatNumber(value)))
     task.wait(2)
-    statusLabel.Text = "Status: Scanning..."
+    status.Text = "Status: Scanning"
 end
 
 -- Scan
 local function scanItems()
     local allItems = workspace:GetDescendants()
-    local currentPlayers = #Players:GetPlayers() .. "/" .. Players.MaxPlayers
-    
     for _, item in ipairs(allItems) do
         if item:IsA("Model") or item:IsA("Part") or item:IsA("Tool") then
-            local itemName = item.Name
-            
-            for _, brainrot in ipairs(Brainrots) do
-                if string.find(string.lower(itemName), string.lower(brainrot)) then
+            local name = item.Name
+            for _, brainrot in ipairs(allBrainrots) do
+                if string.find(string.lower(name), string.lower(brainrot)) then
                     local mutation = nil
                     for _, mut in ipairs(Mutations) do
-                        if string.find(string.lower(itemName), string.lower(mut)) then
+                        if string.find(string.lower(name), string.lower(mut)) then
                             mutation = mut
                             break
                         end
                     end
-                    
                     local value = 50000000
                     if mutation == "Diamond" then value = 250000000
                     elseif mutation == "Divine" or mutation == "Galaxy" then value = 200000000
                     elseif mutation == "Gold" then value = 100000000
-                    elseif mutation == "Rainbow" or mutation == "Cyber" then value = 75000000
+                    elseif mutation == "Cyber" or mutation == "Rainbow" then value = 75000000
                     end
-                    
-                    local key = game.JobId .. "_" .. itemName
+                    local key = game.JobId .. "_" .. name
                     if not scannedItems[key] then
                         scannedItems[key] = true
-                        addLog(itemName, mutation, value, game.JobId, game.PlaceId, currentPlayers)
+                        addLog(name, mutation, value)
                     end
                     break
                 end
@@ -201,7 +243,7 @@ end
 local function serverHop()
     if isHopping then return end
     isHopping = true
-    statusLabel.Text = "Status: Hopping..."
+    status.Text = "Status: Hopping"
     
     pcall(function()
         if queue_on_teleport then
@@ -228,34 +270,29 @@ local function serverHop()
         end
         
         hopsCount = hopsCount + 1
-        hopsLabel.Text = "Hops: " .. hopsCount
+        hopLabel.Text = "Hops: " .. hopsCount
     end)
     
-    task.wait(2)
+    task.wait(3)
     isHopping = false
 end
 
 -- Main loop
 local lastHop = tick()
-local SCAN_INTERVAL = 1
-local HOP_INTERVAL = 10
 
 task.spawn(function()
     while true do
         pcall(function()
             scanItems()
-            
-            if tick() - lastHop >= HOP_INTERVAL then
+            if tick() - lastHop >= 10 then
                 serverHop()
                 lastHop = tick()
                 task.wait(3)
                 scannedItems = {}
             end
         end)
-        task.wait(SCAN_INTERVAL)
+        task.wait(1)
     end
 end)
 
-print("✅ SCANNER LOADED - Press F9 to see console")
-print("📡 Scanning for brainrots every 1 second")
-print("🔄 Hopping servers every 10 seconds")
+print("✅ SCANNER LOADED - " .. #allBrainrots .. " brainrots loaded")
