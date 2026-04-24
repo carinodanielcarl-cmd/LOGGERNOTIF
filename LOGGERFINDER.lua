@@ -1,13 +1,13 @@
--- LOGGERFINDER SCANNER - FULL BRAINROTS LIST
+-- LOGGERFINDER SCANNER - READY TO USE
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local SoundService = game:GetService("SoundService")
 local lp = Players.LocalPlayer
 
--- YOUR PASTEBIN INFO
+-- YOUR PASTE ID - ALREADY FILLED
 local PASTEBIN_API_KEY = "ZtGs1tRiCfQXw-728nn2Vy8sSCoRLBTw"
-local PASTE_ID = "YOUR_PASTE_ID_HERE"
+local PASTE_ID = "fZ6wdRZV"
 
 -- COMPLETE BRAINROTS LIST
 local allBrainrots = {
@@ -126,7 +126,6 @@ local function playSound()
     pcall(function() notifSound:Play() end)
 end
 
--- Format number
 local function formatNumber(n)
     n = tonumber(n) or 0
     if n >= 1000000 then
@@ -146,7 +145,6 @@ local hopsCount = 0
 local findsCount = 0
 local isHopping = false
 
--- Get current logs
 local function getCurrentLogs()
     local requestFunc = syn and syn.request or request or http_request
     if not requestFunc then return {} end
@@ -163,7 +161,6 @@ local function getCurrentLogs()
     return {}
 end
 
--- Save to Pastebin
 local function saveToPastebin(logs)
     local jsonData = HttpService:JSONEncode({findings = logs, lastUpdate = os.time()})
     local requestFunc = syn and syn.request or request or http_request
@@ -177,7 +174,6 @@ local function saveToPastebin(logs)
     return response and (response.StatusCode == 200 or (response.Body and string.find(response.Body, "paste")))
 end
 
--- Add log
 local function addLog(itemName, mutation, value)
     findsCount = findsCount + 1
     foundLabel.Text = "Found: " .. findsCount
@@ -206,7 +202,6 @@ local function addLog(itemName, mutation, value)
     status.Text = "Status: Scanning"
 end
 
--- Scan
 local function scanItems()
     local allItems = workspace:GetDescendants()
     for _, item in ipairs(allItems) do
@@ -239,7 +234,6 @@ local function scanItems()
     end
 end
 
--- Server hop
 local function serverHop()
     if isHopping then return end
     isHopping = true
@@ -277,7 +271,6 @@ local function serverHop()
     isHopping = false
 end
 
--- Main loop
 local lastHop = tick()
 
 task.spawn(function()
@@ -296,3 +289,4 @@ task.spawn(function()
 end)
 
 print("✅ SCANNER LOADED - " .. #allBrainrots .. " brainrots loaded")
+print("📡 Using Paste ID: " .. PASTE_ID)
